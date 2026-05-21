@@ -4,16 +4,12 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <meta name="theme-color" content="#0f172a" />
-<title>Incidencias</title>
+<title>Incidencias Municipales</title>
 
-<!-- PWA: permite instalar la app en móvil/escritorio -->
 <link rel="manifest" href="manifest.json" />
 
-<!-- Leaflet: mapa interactivo -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
 <script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
-
-<!-- Google Identity Services: para el login -->
 <script src="https://accounts.google.com/gsi/client" async defer></script>
 
 <style>
@@ -29,6 +25,7 @@
     --success: #10b981;
     --danger: #ef4444;
     --warning: #f59e0b;
+    --purple: #a78bfa;
   }
 
   * { box-sizing: border-box; margin: 0; padding: 0; }
@@ -38,7 +35,6 @@
     background: var(--bg);
     color: var(--text);
     min-height: 100vh;
-    padding: 0;
     -webkit-tap-highlight-color: transparent;
   }
 
@@ -53,7 +49,9 @@
     display: flex;
     align-items: center;
     justify-content: space-between;
-    padding: 8px 0 20px;
+    padding: 8px 0 16px;
+    gap: 12px;
+    flex-wrap: wrap;
   }
 
   header h1 {
@@ -62,8 +60,13 @@
     letter-spacing: -0.5px;
   }
 
-  header h1 span {
-    color: var(--accent);
+  header h1 span { color: var(--accent); }
+
+  .header-right {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    flex-wrap: wrap;
   }
 
   .tabs {
@@ -73,31 +76,30 @@
     padding: 4px;
     border-radius: 12px;
     margin-bottom: 20px;
+    overflow-x: auto;
+    scrollbar-width: none;
   }
+  .tabs::-webkit-scrollbar { display: none; }
 
   .tab {
     flex: 1;
-    padding: 10px;
+    min-width: max-content;
+    padding: 10px 14px;
     border: none;
     background: transparent;
     color: var(--text-dim);
-    font-size: 14px;
+    font-size: 13px;
     font-weight: 500;
     border-radius: 8px;
     cursor: pointer;
     transition: all 0.2s;
+    white-space: nowrap;
   }
+  .tab.active { background: var(--accent-dark); color: white; }
+  .tab.admin-tab { color: var(--purple); }
+  .tab.admin-tab.active { background: #7c3aed; color: white; }
 
-  .tab.active {
-    background: var(--accent-dark);
-    color: white;
-  }
-
-  /* ---- FORMULARIO ---- */
-
-  .form-group {
-    margin-bottom: 16px;
-  }
+  .form-group { margin-bottom: 16px; }
 
   label {
     display: block;
@@ -120,20 +122,10 @@
     font-family: inherit;
     transition: border-color 0.2s;
   }
+  input:focus, select:focus, textarea:focus { outline: none; border-color: var(--accent); }
+  textarea { resize: vertical; min-height: 80px; }
 
-  input:focus, select:focus, textarea:focus {
-    outline: none;
-    border-color: var(--accent);
-  }
-
-  textarea {
-    resize: vertical;
-    min-height: 80px;
-  }
-
-  /* ---- MAPA ---- */
-
-  .location-section {
+  .location-section, .photo-section {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 12px;
@@ -141,14 +133,14 @@
     margin-bottom: 16px;
   }
 
-  .loc-buttons {
+  .loc-buttons, .photo-btn-row {
     display: grid;
     grid-template-columns: 1fr 1fr;
     gap: 8px;
     margin-bottom: 12px;
   }
 
-  .loc-btn {
+  .loc-btn, .photo-btn {
     padding: 10px;
     background: var(--surface-2);
     border: 1px solid var(--border);
@@ -163,18 +155,13 @@
     gap: 6px;
     transition: background 0.2s;
   }
+  .photo-btn { padding: 14px; border-style: dashed; flex-direction: column; gap: 4px; }
+  .photo-btn .icon { font-size: 24px; }
+  .loc-btn:hover, .photo-btn:hover { background: var(--border); }
+  .loc-btn:active, .photo-btn:active { transform: scale(0.98); }
 
-  .loc-btn:hover { background: var(--border); }
-  .loc-btn:active { transform: scale(0.98); }
-
-  .search-row {
-    display: flex;
-    gap: 6px;
-    margin-bottom: 12px;
-  }
-
+  .search-row { display: flex; gap: 6px; margin-bottom: 12px; }
   .search-row input { flex: 1; }
-
   .search-row button {
     padding: 0 14px;
     background: var(--accent-dark);
@@ -186,12 +173,13 @@
     white-space: nowrap;
   }
 
-  #map {
+  #map, #map-global {
     height: 280px;
     border-radius: 10px;
     border: 1px solid var(--border);
     background: #1a2332;
   }
+  #map-global { height: 400px; }
 
   .coords-display {
     font-size: 12px;
@@ -201,70 +189,20 @@
     text-align: center;
   }
 
-  /* ---- FOTO ---- */
-
-  .photo-section {
-    background: var(--surface);
-    border: 1px solid var(--border);
-    border-radius: 12px;
-    padding: 12px;
-    margin-bottom: 16px;
-  }
-
-  .photo-btn-row {
-    display: grid;
-    grid-template-columns: 1fr 1fr;
-    gap: 8px;
-  }
-
-  .photo-btn {
-    padding: 14px;
-    background: var(--surface-2);
-    border: 1px dashed var(--border);
-    color: var(--text);
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 500;
-    cursor: pointer;
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    gap: 4px;
-  }
-
-  .photo-btn .icon { font-size: 24px; }
-
   .photo-preview {
     margin-top: 12px;
     position: relative;
     border-radius: 10px;
     overflow: hidden;
   }
-
-  .photo-preview img {
-    width: 100%;
-    display: block;
-    max-height: 300px;
-    object-fit: cover;
-  }
-
+  .photo-preview img { width: 100%; display: block; max-height: 300px; object-fit: cover; }
   .photo-remove {
-    position: absolute;
-    top: 8px;
-    right: 8px;
-    background: rgba(0,0,0,0.7);
-    color: white;
-    border: none;
-    width: 32px;
-    height: 32px;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 16px;
+    position: absolute; top: 8px; right: 8px;
+    background: rgba(0,0,0,0.7); color: white; border: none;
+    width: 32px; height: 32px; border-radius: 50%;
+    cursor: pointer; font-size: 16px;
   }
-
   input[type="file"] { display: none; }
-
-  /* ---- BOTÓN PRINCIPAL ---- */
 
   .submit-btn {
     width: 100%;
@@ -279,15 +217,10 @@
     margin-top: 8px;
     transition: all 0.2s;
   }
-
-  .submit-btn:disabled {
-    opacity: 0.5;
-    cursor: not-allowed;
-  }
-
+  .submit-btn:disabled { opacity: 0.5; cursor: not-allowed; }
   .submit-btn:active:not(:disabled) { transform: scale(0.98); }
-
-  /* ---- LISTADO ---- */
+  .submit-btn.secondary { background: var(--surface-2); color: var(--text); }
+  .submit-btn.danger { background: var(--danger); color: white; }
 
   .incidencia-card {
     background: var(--surface);
@@ -296,18 +229,13 @@
     padding: 14px;
     margin-bottom: 12px;
   }
-
   .incidencia-header {
-    display: flex;
-    justify-content: space-between;
-    align-items: flex-start;
-    margin-bottom: 8px;
+    display: flex; justify-content: space-between;
+    align-items: flex-start; margin-bottom: 8px; gap: 8px;
   }
-
-  .incidencia-tipo {
-    font-weight: 600;
-    font-size: 15px;
-  }
+  .incidencia-tipo { font-weight: 600; font-size: 15px; flex: 1; }
+  .incidencia-meta { font-size: 13px; color: var(--text-dim); line-height: 1.6; }
+  .incidencia-foto { width: 100%; border-radius: 8px; margin-top: 10px; max-height: 200px; object-fit: cover; }
 
   .badge {
     font-size: 11px;
@@ -316,86 +244,164 @@
     font-weight: 600;
     text-transform: uppercase;
     letter-spacing: 0.5px;
+    white-space: nowrap;
   }
-
   .badge-pendiente { background: #f59e0b33; color: #f59e0b; }
-  .badge-proceso { background: #38bdf833; color: #38bdf8; }
+  .badge-enproceso, .badge-proceso { background: #38bdf833; color: #38bdf8; }
   .badge-resuelto { background: #10b98133; color: #10b981; }
-  .badge-sync { background: #6366f133; color: #818cf8; }
-  .badge-pending-sync { background: #ef444433; color: #ef4444; }
 
-  .incidencia-meta {
-    font-size: 13px;
-    color: var(--text-dim);
-    line-height: 1.6;
-  }
-
-  .incidencia-foto {
-    width: 100%;
-    border-radius: 8px;
-    margin-top: 10px;
-    max-height: 200px;
-    object-fit: cover;
-  }
-
-  /* ---- TOAST ---- */
-
-  .toast {
-    position: fixed;
-    bottom: 24px;
-    left: 50%;
-    transform: translateX(-50%) translateY(120%);
+  .action-row { display: flex; gap: 6px; margin-top: 10px; flex-wrap: wrap; }
+  .action-btn {
+    padding: 6px 12px;
     background: var(--surface-2);
     border: 1px solid var(--border);
-    padding: 12px 20px;
-    border-radius: 10px;
-    font-size: 14px;
-    font-weight: 500;
-    transition: transform 0.3s;
-    z-index: 1000;
-    max-width: 90%;
-    text-align: center;
+    color: var(--text);
+    border-radius: 6px;
+    font-size: 12px;
+    cursor: pointer;
   }
+  .action-btn:hover { background: var(--border); }
+  .action-btn.primary { background: var(--accent-dark); color: white; border-color: var(--accent-dark); }
+  .action-btn.success { background: var(--success); color: white; border-color: var(--success); }
 
+  .toast {
+    position: fixed; bottom: 24px; left: 50%;
+    transform: translateX(-50%) translateY(120%);
+    background: var(--surface-2); border: 1px solid var(--border);
+    padding: 12px 20px; border-radius: 10px;
+    font-size: 14px; font-weight: 500;
+    transition: transform 0.3s; z-index: 1000;
+    max-width: 90%; text-align: center;
+  }
   .toast.show { transform: translateX(-50%) translateY(0); }
   .toast.success { border-color: var(--success); }
   .toast.error { border-color: var(--danger); }
 
-  /* ---- CONFIG ---- */
-
-  .config-section {
+  .config-section, .stat-card {
     background: var(--surface);
     border: 1px solid var(--border);
     border-radius: 12px;
     padding: 16px;
     margin-bottom: 16px;
   }
+  .config-section h2 { font-size: 16px; margin-bottom: 12px; }
+  .config-section p { font-size: 13px; color: var(--text-dim); line-height: 1.6; margin-bottom: 10px; }
+  .config-section .url-input { font-family: monospace; font-size: 12px; }
 
-  .config-section h2 {
-    font-size: 16px;
+  .empty { text-align: center; color: var(--text-dim); padding: 40px 20px; font-size: 14px; }
+
+  /* ---- LOGIN ---- */
+  #login-screen {
+    position: fixed; inset: 0; background: var(--bg);
+    display: flex; flex-direction: column;
+    align-items: center; justify-content: center;
+    padding: 24px; z-index: 10000;
+  }
+  #login-screen h1 { font-size: 28px; margin-bottom: 8px; letter-spacing: -0.5px; }
+  #login-screen h1 span { color: var(--accent); }
+  #login-screen p {
+    color: var(--text-dim); font-size: 14px; margin-bottom: 32px;
+    text-align: center; max-width: 320px; line-height: 1.5;
+  }
+  #login-error { color: var(--danger); font-size: 13px; text-align: center; margin-top: 16px; max-width: 320px; }
+
+  .user-pill {
+    display: flex; align-items: center; gap: 8px;
+    background: var(--surface); padding: 4px 4px 4px 10px;
+    border-radius: 20px; border: 1px solid var(--border); font-size: 12px;
+  }
+  .user-pill .email { color: var(--text); max-width: 120px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .user-pill .admin-mark {
+    background: var(--purple); color: var(--bg);
+    padding: 2px 6px; border-radius: 4px;
+    font-weight: 600; font-size: 10px;
+  }
+  .user-pill button {
+    background: var(--surface-2); border: none; color: var(--text-dim);
+    width: 22px; height: 22px; border-radius: 50%;
+    cursor: pointer; font-size: 12px; line-height: 1;
+  }
+  .user-pill button:hover { background: var(--danger); color: white; }
+
+  /* ---- DASHBOARD ---- */
+  .stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
+    gap: 10px;
+    margin-bottom: 16px;
+  }
+  .stat-card {
+    margin: 0; padding: 14px;
+    text-align: center;
+  }
+  .stat-card .label {
+    font-size: 11px; color: var(--text-dim);
+    text-transform: uppercase; letter-spacing: 0.5px;
+    margin-bottom: 6px;
+  }
+  .stat-card .value { font-size: 28px; font-weight: 600; }
+  .stat-card.pendiente .value { color: var(--warning); }
+  .stat-card.proceso .value { color: var(--accent); }
+  .stat-card.resuelto .value { color: var(--success); }
+
+  .filters {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+    gap: 8px;
+    margin-bottom: 16px;
+    padding: 12px;
+    background: var(--surface);
+    border-radius: 10px;
+    border: 1px solid var(--border);
+  }
+  .filters select { padding: 8px 10px; font-size: 13px; }
+
+  /* ---- ADMIN: GESTIÓN DE LISTAS ---- */
+  .list-editor {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
     margin-bottom: 12px;
   }
-
-  .config-section p {
-    font-size: 13px;
-    color: var(--text-dim);
-    line-height: 1.6;
-    margin-bottom: 10px;
-  }
-
-  .config-section .url-input {
-    font-family: monospace;
-    font-size: 12px;
-  }
-
-  .empty {
-    text-align: center;
-    color: var(--text-dim);
-    padding: 40px 20px;
+  .list-editor h3 {
     font-size: 14px;
+    margin-bottom: 10px;
+    color: var(--purple);
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
   }
-
-  .leaflet-container { font-family: inherit; }
+  .list-item {
+    display: flex; gap: 8px; align-items: center;
+    padding: 6px 10px;
+    background: var(--surface-2);
+    border-radius: 6px;
+    margin-bottom: 6px;
+    font-size: 13px;
+  }
+  .list-item span { flex: 1; }
+  .list-item button {
+    background: transparent;
+    border: none;
+    color: var(--danger);
+    cursor: pointer;
+    font-size: 16px;
+    width: 24px; height: 24px;
+    border-radius: 50%;
+  }
+  .list-item button:hover { background: var(--danger); color: white; }
+  .add-row { display: flex; gap: 6px; margin-top: 8px; }
+  .add-row input { flex: 1; font-size: 13px; padding: 8px 10px; }
+  .add-row button {
+    padding: 0 12px;
+    background: var(--accent-dark);
+    border: none;
+    color: white;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    white-space: nowrap;
+  }
 
   footer {
     text-align: center;
@@ -405,100 +411,26 @@
     border-top: 1px solid var(--border);
     margin-top: 24px;
   }
+  footer .author { color: var(--accent); font-weight: 500; }
 
-  footer .author {
-    color: var(--accent);
-    font-weight: 500;
-  }
-
-  /* ---- LOGIN ---- */
-
-  #login-screen {
-    position: fixed;
-    inset: 0;
-    background: var(--bg);
-    display: flex;
-    flex-direction: column;
-    align-items: center;
-    justify-content: center;
-    padding: 24px;
-    z-index: 10000;
-  }
-
-  #login-screen h1 {
-    font-size: 28px;
-    margin-bottom: 8px;
-    letter-spacing: -0.5px;
-  }
-
-  #login-screen h1 span { color: var(--accent); }
-
-  #login-screen p {
-    color: var(--text-dim);
-    font-size: 14px;
-    margin-bottom: 32px;
-    text-align: center;
-    max-width: 320px;
-    line-height: 1.5;
-  }
-
-  #login-btn-container {
-    margin-bottom: 16px;
-  }
-
-  #login-error {
-    color: var(--danger);
-    font-size: 13px;
-    text-align: center;
-    margin-top: 16px;
-    max-width: 320px;
-  }
-
-  .user-pill {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-    background: var(--surface);
-    padding: 4px 4px 4px 10px;
-    border-radius: 20px;
-    border: 1px solid var(--border);
-    font-size: 12px;
-  }
-
-  .user-pill .email {
-    color: var(--text);
-    max-width: 120px;
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
-
-  .user-pill button {
-    background: var(--surface-2);
-    border: none;
-    color: var(--text-dim);
-    width: 22px;
-    height: 22px;
-    border-radius: 50%;
-    cursor: pointer;
-    font-size: 12px;
-    line-height: 1;
-  }
-
-  .user-pill button:hover { background: var(--danger); color: white; }
+  .leaflet-container { font-family: inherit; }
+  .map-popup { font-size: 13px; line-height: 1.5; min-width: 180px; }
+  .map-popup strong { display: block; margin-bottom: 4px; }
+  .map-popup img { width: 100%; border-radius: 4px; margin-top: 6px; }
 
   @media (max-width: 480px) {
     header h1 { font-size: 18px; }
     .app { padding: 12px; }
+    .stat-card .value { font-size: 22px; }
   }
 </style>
 </head>
 <body>
 
-<!-- Pantalla de login (oculta hasta que sepamos si hay sesión) -->
+<!-- Pantalla de login -->
 <div id="login-screen" style="display:none;">
   <h1>Inci<span>·</span>dencias</h1>
-  <p>Inicia sesión con tu cuenta del ayuntamiento para registrar incidencias.</p>
+  <p id="login-text">Inicia sesión con tu cuenta del ayuntamiento para registrar incidencias.</p>
   <div id="login-btn-container"></div>
   <div id="login-error"></div>
 </div>
@@ -506,38 +438,30 @@
 <div class="app">
   <header>
     <h1>Inci<span>·</span>dencias</h1>
-    <div style="display:flex;align-items:center;gap:8px;">
+    <div class="header-right">
       <div id="sync-status" style="font-size:12px;color:var(--text-dim);"></div>
       <div id="user-info" class="user-pill" style="display:none;">
         <span class="email" id="user-email"></span>
+        <span class="admin-mark" id="admin-mark" style="display:none;">ADMIN</span>
         <button id="btn-logout" title="Cerrar sesión">✕</button>
       </div>
     </div>
   </header>
 
-  <div class="tabs">
+  <div class="tabs" id="tabs">
     <button class="tab active" data-tab="nueva">Nueva</button>
-    <button class="tab" data-tab="listado">Listado</button>
-    <button class="tab" data-tab="config">Config</button>
+    <button class="tab" data-tab="listado">Mis incidencias</button>
+    <button class="tab" data-tab="mapa">Mapa</button>
+    <button class="tab" data-tab="dashboard">Dashboard</button>
+    <button class="tab admin-tab" data-tab="admin" id="tab-admin-btn" style="display:none;">⚙ Admin</button>
   </div>
 
-  <!-- ===== TAB: NUEVA INCIDENCIA ===== -->
+  <!-- ===== NUEVA ===== -->
   <div id="tab-nueva" class="tab-content">
     <div class="form-group">
       <label>Tipo de incidencia</label>
-      <input type="text" id="tipo" placeholder="Farola fundida, contenedor roto, pintada..." list="tipos-comunes" />
-      <datalist id="tipos-comunes">
-        <option value="Farola fundida">
-        <option value="Contenedor dañado">
-        <option value="Pintada / Grafiti">
-        <option value="Mobiliario urbano roto">
-        <option value="Árbol caído / poda">
-        <option value="Bache / asfalto">
-        <option value="Señalización dañada">
-        <option value="Acera levantada">
-        <option value="Fuga de agua">
-        <option value="Jardinería / mantenimiento">
-      </datalist>
+      <input type="text" id="tipo" placeholder="Farola fundida, contenedor roto..." list="dl-tipos" />
+      <datalist id="dl-tipos"></datalist>
     </div>
 
     <div class="form-group">
@@ -545,7 +469,6 @@
       <textarea id="descripcion" placeholder="Detalla la incidencia..."></textarea>
     </div>
 
-    <!-- UBICACIÓN -->
     <label>Ubicación</label>
     <div class="location-section">
       <div class="loc-buttons">
@@ -561,18 +484,11 @@
       <input type="hidden" id="direccion-texto" />
     </div>
 
-    <!-- FOTO -->
     <label>Fotografía</label>
     <div class="photo-section">
       <div class="photo-btn-row">
-        <label class="photo-btn" for="foto-camera">
-          <span class="icon">📷</span>
-          <span>Cámara</span>
-        </label>
-        <label class="photo-btn" for="foto-galeria">
-          <span class="icon">🖼️</span>
-          <span>Galería</span>
-        </label>
+        <label class="photo-btn" for="foto-camera"><span class="icon">📷</span><span>Cámara</span></label>
+        <label class="photo-btn" for="foto-galeria"><span class="icon">🖼️</span><span>Galería</span></label>
       </div>
       <input type="file" id="foto-camera" accept="image/*" capture="environment" />
       <input type="file" id="foto-galeria" accept="image/*" />
@@ -581,61 +497,86 @@
 
     <div class="form-group">
       <label>Área responsable</label>
-      <select id="area">
-        <option value="">Selecciona un área...</option>
-        <option value="Verde Urbano">Verde Urbano</option>
-        <option value="Mantenimiento de Espacio Público">Mantenimiento de Espacio Público</option>
-        <option value="Limpieza Viaria">Limpieza Viaria</option>
-        <option value="Alumbrado Público">Alumbrado Público</option>
-        <option value="Movilidad y Tráfico">Movilidad y Tráfico</option>
-        <option value="Aguas">Aguas</option>
-        <option value="Otros">Otros</option>
-      </select>
+      <input type="text" id="area" placeholder="Área..." list="dl-areas" />
+      <datalist id="dl-areas"></datalist>
     </div>
 
     <div class="form-group">
       <label>Técnico responsable</label>
-      <input type="text" id="responsable" placeholder="Nombre del responsable" list="responsables-comunes" />
-      <datalist id="responsables-comunes"></datalist>
+      <input type="text" id="responsable" placeholder="Nombre del responsable" list="dl-responsables" />
+      <datalist id="dl-responsables"></datalist>
     </div>
 
     <div class="form-group">
       <label>Distrito / Zona</label>
-      <input type="text" id="distrito" placeholder="Distrito o zona" />
+      <input type="text" id="distrito" placeholder="Distrito o zona" list="dl-distritos" />
+      <datalist id="dl-distritos"></datalist>
     </div>
 
     <button class="submit-btn" id="btn-submit">Registrar incidencia</button>
   </div>
 
-  <!-- ===== TAB: LISTADO ===== -->
+  <!-- ===== LISTADO ===== -->
   <div id="tab-listado" class="tab-content" style="display:none;">
     <div id="listado-contenido"></div>
   </div>
 
-  <!-- ===== TAB: CONFIGURACIÓN ===== -->
-  <div id="tab-config" class="tab-content" style="display:none;">
+  <!-- ===== MAPA ===== -->
+  <div id="tab-mapa" class="tab-content" style="display:none;">
+    <div class="filters" id="filters-mapa">
+      <select id="filt-mapa-estado"><option value="">Todos los estados</option></select>
+      <select id="filt-mapa-area"><option value="">Todas las áreas</option></select>
+      <select id="filt-mapa-distrito"><option value="">Todos los distritos</option></select>
+      <select id="filt-mapa-responsable"><option value="">Todos los responsables</option></select>
+    </div>
+    <div id="map-global"></div>
+    <div style="text-align:center;color:var(--text-dim);font-size:12px;margin-top:8px;" id="map-count"></div>
+  </div>
+
+  <!-- ===== DASHBOARD ===== -->
+  <div id="tab-dashboard" class="tab-content" style="display:none;">
+    <div class="filters">
+      <select id="filt-dash-area"><option value="">Todas las áreas</option></select>
+      <select id="filt-dash-distrito"><option value="">Todos los distritos</option></select>
+      <select id="filt-dash-responsable"><option value="">Todos los responsables</option></select>
+      <select id="filt-dash-tipo"><option value="">Todos los tipos</option></select>
+    </div>
+    <div class="stats-grid" id="stats-grid"></div>
+    <div id="stats-breakdown"></div>
+  </div>
+
+  <!-- ===== ADMIN (oculto para no admin) ===== -->
+  <div id="tab-admin" class="tab-content" style="display:none;">
     <div class="config-section">
-      <h2>Conexión con Google Sheets</h2>
-      <p>URL de tu Apps Script (la que termina en <code>/exec</code>):</p>
+      <h2>⚙ Conexión</h2>
+      <p>URL del Apps Script (termina en <code>/exec</code>):</p>
       <input type="text" id="config-url" class="url-input" placeholder="https://script.google.com/macros/s/.../exec" />
-
-      <p style="margin-top:16px;">Client ID de Google Cloud (termina en <code>.apps.googleusercontent.com</code>):</p>
+      <p style="margin-top:16px;">Client ID de Google Cloud:</p>
       <input type="text" id="config-client-id" class="url-input" placeholder="Client ID" />
-
       <button class="submit-btn" id="btn-save-config" style="margin-top:12px;">Guardar configuración</button>
-      <p style="margin-top:12px;font-size:12px;color:var(--text-dim);">Tras guardar el Client ID hay que recargar la página para que el botón de login funcione con la nueva configuración.</p>
+      <p style="margin-top:8px;font-size:11px;">Recarga la página tras guardar el Client ID.</p>
     </div>
 
     <div class="config-section">
-      <h2>Sincronización</h2>
-      <p id="sync-info">Las incidencias pendientes se enviarán automáticamente.</p>
-      <button class="submit-btn" id="btn-sync" style="background:var(--surface-2);color:var(--text);">Sincronizar ahora</button>
+      <h2>👥 Correos autorizados</h2>
+      <p>Personas que pueden iniciar sesión y registrar incidencias. Tu correo de admin está siempre autorizado aunque no aparezca aquí.</p>
+      <div id="autorizados-list"></div>
+      <div class="add-row">
+        <input type="email" id="autorizados-input" placeholder="nuevo.correo@santboi.cat" />
+        <button onclick="addAutorizado()">Añadir</button>
+      </div>
     </div>
 
+    <div id="listas-editores"></div>
+
     <div class="config-section">
-      <h2>Datos locales</h2>
-      <p>Las incidencias se guardan en este dispositivo aunque no haya conexión, y se sincronizan después.</p>
-      <button class="submit-btn" id="btn-clear" style="background:var(--danger);">Borrar todo lo local</button>
+      <h2>🔧 Mantenimiento</h2>
+      <p>Inicializa la pestaña "Config" en tu Sheets con valores por defecto. Solo necesario la primera vez.</p>
+      <button class="submit-btn secondary" id="btn-inicializar">Inicializar Config en Sheets</button>
+      <p style="margin-top:16px;">Sincronización forzada de pendientes:</p>
+      <button class="submit-btn secondary" id="btn-sync">Sincronizar ahora</button>
+      <p style="margin-top:16px;">Borrar todos los datos locales (no afecta a Sheets):</p>
+      <button class="submit-btn danger" id="btn-clear">Borrar datos locales</button>
     </div>
   </div>
 </div>
@@ -647,40 +588,42 @@
 </footer>
 
 <script>
-// ===== ESTADO =====
+// =============================================================
+// ESTADO GLOBAL
+// =============================================================
 const STORE = {
-  get incidencias() {
-    return JSON.parse(localStorage.getItem('incidencias') || '[]');
-  },
-  set incidencias(val) {
-    localStorage.setItem('incidencias', JSON.stringify(val));
-  },
-  get config() {
-    return JSON.parse(localStorage.getItem('config') || '{}');
-  },
-  set config(val) {
-    localStorage.setItem('config', JSON.stringify(val));
-  }
+  get incidencias() { return JSON.parse(localStorage.getItem('incidencias') || '[]'); },
+  set incidencias(v) { localStorage.setItem('incidencias', JSON.stringify(v)); },
+  get config() { return JSON.parse(localStorage.getItem('config') || '{}'); },
+  set config(v) { localStorage.setItem('config', JSON.stringify(v)); },
+  get listas() { return JSON.parse(localStorage.getItem('listas') || '{}'); },
+  set listas(v) { localStorage.setItem('listas', JSON.stringify(v)); },
+  get incidenciasRemotas() { return JSON.parse(localStorage.getItem('incidencias_remotas') || '[]'); },
+  set incidenciasRemotas(v) { localStorage.setItem('incidencias_remotas', JSON.stringify(v)); }
 };
 
 let map, marker;
+let mapGlobal;
+let mapGlobalMarkers = [];
 let currentPhoto = null;
 let currentCoords = null;
+let currentUser = null;   // { email, name, token }
+let esAdmin = false;
+let appInitialized = false;
 
-// ===== INIT =====
+// =============================================================
+// INIT
+// =============================================================
 document.addEventListener('DOMContentLoaded', () => {
   document.getElementById('footer-year').textContent = new Date().getFullYear();
   initConfig();
   initLogin();
-  // El resto de la app se inicializa solo si hay sesión válida (ver onLoginSuccess)
 });
 
-// ===== LOGIN GOOGLE =====
-let currentUser = null;     // { email, name, token }
-let appInitialized = false;
-
+// =============================================================
+// LOGIN GOOGLE
+// =============================================================
 function initLogin() {
-  // Esperar a que la librería de Google haya cargado
   if (typeof google === 'undefined' || !google.accounts) {
     setTimeout(initLogin, 200);
     return;
@@ -688,29 +631,23 @@ function initLogin() {
 
   const clientId = STORE.config.clientId;
   if (!clientId) {
-    showLoginScreen('Configura primero el Client ID en pestaña Config (recarga después).');
+    showLoginScreen('Configura primero el Client ID en pestaña Admin (recarga después).');
     showAppShellForConfig();
     return;
   }
 
-  // ¿Hay token guardado y aún válido?
   const saved = getSavedSession();
-  if (saved) {
-    onLoginSuccess(saved.token, saved.payload);
-    return;
-  }
+  if (saved) { onLoginSuccess(saved.token, saved.payload); return; }
 
-  // Inicializar Google Identity Services
   google.accounts.id.initialize({
     client_id: clientId,
     callback: handleCredentialResponse,
     auto_select: false,
-    use_fedcm_for_prompt: true,  // evita problemas COOP en navegadores recientes
+    use_fedcm_for_prompt: true,
     ux_mode: 'popup',
     itp_support: true,
   });
 
-  // Renderizar botón de login
   google.accounts.id.renderButton(
     document.getElementById('login-btn-container'),
     { theme: 'filled_blue', size: 'large', text: 'signin_with', shape: 'pill', logo_alignment: 'left' }
@@ -723,37 +660,44 @@ function handleCredentialResponse(response) {
   const token = response.credential;
   const payload = parseJwt(token);
   if (!payload || !payload.email) {
-    document.getElementById('login-error').textContent = 'Error obteniendo datos del login.';
+    document.getElementById('login-error').textContent = 'Error obteniendo datos.';
     return;
   }
   saveSession(token, payload);
   onLoginSuccess(token, payload);
 }
 
-function onLoginSuccess(token, payload) {
+async function onLoginSuccess(token, payload) {
   currentUser = { email: payload.email, name: payload.name || payload.email, token };
   document.getElementById('login-screen').style.display = 'none';
   const userInfo = document.getElementById('user-info');
   userInfo.style.display = 'flex';
   document.getElementById('user-email').textContent = payload.email;
 
+  // Pedir listas al servidor (esto también nos dice si somos admin)
+  await cargarListas();
+
+  if (esAdmin) {
+    document.getElementById('admin-mark').style.display = 'inline-block';
+    document.getElementById('tab-admin-btn').style.display = 'block';
+  }
+
   if (!appInitialized) {
     initMap();
     initTabs();
     initForm();
-    refreshListado();
-    refreshResponsables();
-    appInitialized = true;
     document.getElementById('btn-logout').addEventListener('click', logout);
+    appInitialized = true;
   }
 
+  refreshListado();
   updateSyncStatus();
   if (navigator.onLine) syncPendientes();
   window.addEventListener('online', syncPendientes);
 }
 
 function logout() {
-  if (!confirm('¿Cerrar sesión? Las incidencias pendientes se mantendrán hasta volver a iniciar sesión.')) return;
+  if (!confirm('¿Cerrar sesión? Las incidencias pendientes se mantendrán.')) return;
   clearSession();
   location.reload();
 }
@@ -764,8 +708,6 @@ function showLoginScreen(msg) {
 }
 
 function showAppShellForConfig() {
-  // Permite acceder a Config aunque no haya Client ID configurado todavía
-  document.getElementById('login-screen').style.background = 'rgba(15,23,42,0.95)';
   setTimeout(() => {
     const btn = document.createElement('button');
     btn.textContent = 'Ir a configuración';
@@ -774,18 +716,14 @@ function showAppShellForConfig() {
     btn.style.maxWidth = '240px';
     btn.onclick = () => {
       document.getElementById('login-screen').style.display = 'none';
-      document.querySelector('.tab[data-tab="config"]').click();
-      if (!appInitialized) {
-        initTabs();
-        appInitialized = true;
-      }
+      document.getElementById('tab-admin-btn').style.display = 'block';
+      if (!appInitialized) { initTabs(); appInitialized = true; }
+      document.querySelector('.tab[data-tab="admin"]').click();
     };
     document.getElementById('login-screen').appendChild(btn);
   }, 100);
 }
 
-// Decodifica un JWT sin verificar (solo para mostrar info al usuario;
-// la verificación real la hace el servidor)
 function parseJwt(token) {
   try {
     const base64 = token.split('.')[1].replace(/-/g, '+').replace(/_/g, '/');
@@ -796,38 +734,103 @@ function parseJwt(token) {
   } catch (e) { return null; }
 }
 
-function saveSession(token, payload) {
-  // Guardamos token y caducidad. Los JWT de Google caducan en ~1h.
-  localStorage.setItem('session', JSON.stringify({
-    token, payload, exp: payload.exp * 1000
-  }));
-}
-
+function saveSession(t, p) { localStorage.setItem('session', JSON.stringify({ token: t, payload: p, exp: p.exp * 1000 })); }
 function getSavedSession() {
   const raw = localStorage.getItem('session');
   if (!raw) return null;
   try {
     const s = JSON.parse(raw);
-    if (Date.now() > s.exp - 60000) return null; // caducado o casi
+    if (Date.now() > s.exp - 60000) return null;
     return s;
   } catch (e) { return null; }
 }
+function clearSession() { localStorage.removeItem('session'); }
 
-function clearSession() {
-  localStorage.removeItem('session');
+// =============================================================
+// API CALLS AL SCRIPT (todo va por doPost con campo "accion")
+// =============================================================
+async function apiCall(accion, extra) {
+  const url = STORE.config.url;
+  if (!url) return { ok: false, error: 'Sin URL configurada' };
+  const session = getSavedSession();
+  if (!session) return { ok: false, error: 'Sin sesión' };
+  try {
+    const body = { accion, token: session.token, ...(extra || {}) };
+    const r = await fetch(url, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(body),
+      redirect: 'follow',
+    });
+    if (!r.ok) return { ok: false, error: 'HTTP ' + r.status };
+    const data = await r.json().catch(() => null);
+    return data || { ok: false, error: 'Respuesta inválida' };
+  } catch (e) {
+    return { ok: false, error: e.message };
+  }
 }
 
-// ===== MAPA =====
+// =============================================================
+// LISTAS (tipos, áreas, responsables, distritos)
+// =============================================================
+async function cargarListas() {
+  const res = await apiCall('obtener_listas');
+  if (res.ok) {
+    STORE.listas = res.listas;
+    esAdmin = !!res.esAdmin;
+    aplicarListasAFormulario();
+  } else {
+    // Sin conexión: usar lo último que tengamos en local
+    aplicarListasAFormulario();
+  }
+}
+
+function aplicarListasAFormulario() {
+  const listas = STORE.listas || {};
+  setDatalist('dl-tipos', listas.tipos);
+  setDatalist('dl-areas', listas.areas);
+  setDatalist('dl-responsables', listas.responsables);
+  setDatalist('dl-distritos', listas.distritos);
+  // Filtros del dashboard y mapa
+  rellenarFiltros();
+}
+
+function setDatalist(id, items) {
+  const dl = document.getElementById(id);
+  if (!dl) return;
+  dl.innerHTML = (items || []).map(v => `<option value="${escapeHtml(v)}">`).join('');
+}
+
+function rellenarFiltros() {
+  const listas = STORE.listas || {};
+  const ops = arr => (arr || []).map(v => `<option value="${escapeHtml(v)}">${escapeHtml(v)}</option>`).join('');
+  const estados = '<option value="Pendiente">Pendiente</option><option value="En Proceso">En Proceso</option><option value="Resuelto">Resuelto</option>';
+  ['filt-mapa-area', 'filt-dash-area'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<option value="">Todas las áreas</option>' + ops(listas.areas);
+  });
+  ['filt-mapa-distrito', 'filt-dash-distrito'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<option value="">Todos los distritos</option>' + ops(listas.distritos);
+  });
+  ['filt-mapa-responsable', 'filt-dash-responsable'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.innerHTML = '<option value="">Todos los responsables</option>' + ops(listas.responsables);
+  });
+  const fmt = document.getElementById('filt-mapa-estado');
+  if (fmt) fmt.innerHTML = '<option value="">Todos los estados</option>' + estados;
+  const fdt = document.getElementById('filt-dash-tipo');
+  if (fdt) fdt.innerHTML = '<option value="">Todos los tipos</option>' + ops(listas.tipos);
+}
+
+// =============================================================
+// MAPA (formulario nueva incidencia)
+// =============================================================
 function initMap() {
-  // Centro inicial: Sant Boi de Llobregat
   map = L.map('map').setView([41.3429, 2.0364], 14);
-
   L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
-    maxZoom: 19,
-    attribution: '© OpenStreetMap'
+    maxZoom: 19, attribution: '© OpenStreetMap'
   }).addTo(map);
-
-  // Tocar en mapa coloca pin
   map.on('click', (e) => setMarker(e.latlng.lat, e.latlng.lng));
 }
 
@@ -845,8 +848,7 @@ function setMarker(lat, lng, label) {
 function updateCoords(lat, lng, label) {
   currentCoords = { lat, lng };
   const display = document.getElementById('coords-display');
-  display.innerHTML = `📍 ${lat.toFixed(6)}, ${lng.toFixed(6)}${label ? '<br>' + label : ''}`;
-  // Reverse geocode si no hay etiqueta
+  display.innerHTML = `📍 ${lat.toFixed(6)}, ${lng.toFixed(6)}${label ? '<br>' + escapeHtml(label) : ''}`;
   if (!label) reverseGeocode(lat, lng);
 }
 
@@ -857,29 +859,82 @@ async function reverseGeocode(lat, lng) {
     if (data.display_name) {
       document.getElementById('direccion-texto').value = data.display_name;
       document.getElementById('coords-display').innerHTML =
-        `📍 ${lat.toFixed(6)}, ${lng.toFixed(6)}<br><span style="color:var(--text);">${data.display_name}</span>`;
+        `📍 ${lat.toFixed(6)}, ${lng.toFixed(6)}<br><span style="color:var(--text);">${escapeHtml(data.display_name)}</span>`;
     }
-  } catch (e) { /* sin red, no pasa nada */ }
+  } catch (e) {}
 }
 
+// =============================================================
+// MAPA GLOBAL (todas las incidencias)
+// =============================================================
+function initMapGlobal() {
+  if (mapGlobal) return;
+  mapGlobal = L.map('map-global').setView([41.3429, 2.0364], 13);
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19, attribution: '© OpenStreetMap'
+  }).addTo(mapGlobal);
+}
+
+function refreshMapGlobal() {
+  initMapGlobal();
+  // limpiar markers anteriores
+  mapGlobalMarkers.forEach(m => m.remove());
+  mapGlobalMarkers = [];
+
+  const incidencias = filterIncidencias({
+    estado: document.getElementById('filt-mapa-estado').value,
+    area: document.getElementById('filt-mapa-area').value,
+    distrito: document.getElementById('filt-mapa-distrito').value,
+    responsable: document.getElementById('filt-mapa-responsable').value,
+  });
+
+  const bounds = [];
+  incidencias.forEach(i => {
+    if (!i.lat || !i.lng) return;
+    const color = i.estado === 'Resuelto' ? '#10b981' : (i.estado === 'En Proceso' ? '#38bdf8' : '#f59e0b');
+    const icon = L.divIcon({
+      className: 'custom-pin',
+      html: `<div style="background:${color};width:20px;height:20px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,0.4);"></div>`,
+      iconSize: [20, 20],
+      iconAnchor: [10, 20]
+    });
+    const m = L.marker([i.lat, i.lng], { icon }).addTo(mapGlobal);
+    const popup = `
+      <div class="map-popup">
+        <strong>${escapeHtml(i.tipo)}</strong>
+        Estado: <span style="color:${color};font-weight:600;">${escapeHtml(i.estado)}</span><br>
+        ${i.area ? 'Área: ' + escapeHtml(i.area) + '<br>' : ''}
+        ${i.responsable ? 'Responsable: ' + escapeHtml(i.responsable) + '<br>' : ''}
+        ${i.distrito ? 'Distrito: ' + escapeHtml(i.distrito) + '<br>' : ''}
+        <small>${new Date(i.fecha).toLocaleString('es-ES')}</small>
+        ${i.fotoUrl ? `<img src="${i.fotoUrl}" />` : ''}
+      </div>`;
+    m.bindPopup(popup);
+    mapGlobalMarkers.push(m);
+    bounds.push([i.lat, i.lng]);
+  });
+
+  document.getElementById('map-count').textContent = `${incidencias.length} incidencia${incidencias.length !== 1 ? 's' : ''}`;
+  if (bounds.length > 0) mapGlobal.fitBounds(bounds, { padding: [40, 40], maxZoom: 16 });
+  setTimeout(() => mapGlobal.invalidateSize(), 100);
+}
+
+// =============================================================
+// FORMULARIO NUEVA INCIDENCIA
+// =============================================================
 document.getElementById('btn-gps').addEventListener('click', () => {
-  if (!navigator.geolocation) {
-    toast('GPS no disponible en este dispositivo', 'error');
-    return;
-  }
+  if (!navigator.geolocation) return toast('GPS no disponible', 'error');
   toast('Localizando...');
   navigator.geolocation.getCurrentPosition(
     (pos) => setMarker(pos.coords.latitude, pos.coords.longitude),
-    (err) => toast('No se pudo obtener GPS: ' + err.message, 'error'),
+    (err) => toast('GPS: ' + err.message, 'error'),
     { enableHighAccuracy: true, timeout: 10000 }
   );
 });
-
 document.getElementById('btn-tap').addEventListener('click', () => {
   toast('Toca el punto exacto en el mapa');
-  map.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  document.getElementById('map').scrollIntoView({ behavior: 'smooth', block: 'center' });
 });
-
 document.getElementById('btn-search').addEventListener('click', searchDireccion);
 document.getElementById('direccion-search').addEventListener('keypress', (e) => {
   if (e.key === 'Enter') { e.preventDefault(); searchDireccion(); }
@@ -891,19 +946,12 @@ async function searchDireccion() {
   try {
     const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1&accept-language=es`);
     const data = await r.json();
-    if (data.length === 0) {
-      toast('No se encontró la dirección', 'error');
-      return;
-    }
-    const { lat, lon, display_name } = data[0];
-    setMarker(parseFloat(lat), parseFloat(lon), display_name);
-    document.getElementById('direccion-texto').value = display_name;
-  } catch (e) {
-    toast('Error buscando dirección', 'error');
-  }
+    if (data.length === 0) return toast('No se encontró', 'error');
+    setMarker(parseFloat(data[0].lat), parseFloat(data[0].lon), data[0].display_name);
+    document.getElementById('direccion-texto').value = data[0].display_name;
+  } catch (e) { toast('Error buscando', 'error'); }
 }
 
-// ===== FOTO =====
 ['foto-camera', 'foto-galeria'].forEach(id => {
   document.getElementById(id).addEventListener('change', handleFoto);
 });
@@ -911,7 +959,6 @@ async function searchDireccion() {
 async function handleFoto(e) {
   const file = e.target.files[0];
   if (!file) return;
-  // Comprime para que no pese mucho en local ni al subirla
   const compressed = await compressImage(file, 1280, 0.75);
   currentPhoto = compressed;
   showPhotoPreview(compressed);
@@ -925,15 +972,9 @@ function compressImage(file, maxDim, quality) {
       img.onload = () => {
         const canvas = document.createElement('canvas');
         let { width, height } = img;
-        if (width > height && width > maxDim) {
-          height *= maxDim / width;
-          width = maxDim;
-        } else if (height > maxDim) {
-          width *= maxDim / height;
-          height = maxDim;
-        }
-        canvas.width = width;
-        canvas.height = height;
+        if (width > height && width > maxDim) { height *= maxDim / width; width = maxDim; }
+        else if (height > maxDim) { width *= maxDim / height; height = maxDim; }
+        canvas.width = width; canvas.height = height;
         canvas.getContext('2d').drawImage(img, 0, 0, width, height);
         resolve(canvas.toDataURL('image/jpeg', quality));
       };
@@ -948,10 +989,8 @@ function showPhotoPreview(dataUrl) {
     <div class="photo-preview">
       <img src="${dataUrl}" />
       <button class="photo-remove" onclick="removePhoto()">✕</button>
-    </div>
-  `;
+    </div>`;
 }
-
 function removePhoto() {
   currentPhoto = null;
   document.getElementById('foto-preview').innerHTML = '';
@@ -959,23 +998,58 @@ function removePhoto() {
   document.getElementById('foto-galeria').value = '';
 }
 
-// ===== TABS =====
+// =============================================================
+// TABS
+// =============================================================
 function initTabs() {
   document.querySelectorAll('.tab').forEach(t => {
-    t.addEventListener('click', () => {
+    t.addEventListener('click', async () => {
       document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
       t.classList.add('active');
       document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
       document.getElementById('tab-' + t.dataset.tab).style.display = 'block';
-      if (t.dataset.tab === 'listado') refreshListado();
-      if (t.dataset.tab === 'nueva' && map) {
-        setTimeout(() => map.invalidateSize(), 100);
+
+      // Acciones específicas por pestaña
+      switch (t.dataset.tab) {
+        case 'nueva':
+          if (map) setTimeout(() => map.invalidateSize(), 100);
+          break;
+        case 'listado':
+          await loadRemoteIncidencias();
+          refreshListado();
+          break;
+        case 'mapa':
+          await loadRemoteIncidencias();
+          refreshMapGlobal();
+          break;
+        case 'dashboard':
+          await loadRemoteIncidencias();
+          refreshDashboard();
+          break;
+        case 'admin':
+          if (esAdmin) {
+            refreshListasEditor();
+            refreshAutorizados();
+          }
+          break;
       }
     });
   });
+
+  // Filtros en mapa y dashboard
+  ['filt-mapa-estado', 'filt-mapa-area', 'filt-mapa-distrito', 'filt-mapa-responsable'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', refreshMapGlobal);
+  });
+  ['filt-dash-area', 'filt-dash-distrito', 'filt-dash-responsable', 'filt-dash-tipo'].forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.addEventListener('change', refreshDashboard);
+  });
 }
 
-// ===== FORMULARIO =====
+// =============================================================
+// FORMULARIO SUBMIT
+// =============================================================
 function initForm() {
   document.getElementById('btn-submit').addEventListener('click', submitIncidencia);
 }
@@ -983,51 +1057,45 @@ function initForm() {
 async function submitIncidencia() {
   const tipo = document.getElementById('tipo').value.trim();
   const descripcion = document.getElementById('descripcion').value.trim();
-  const area = document.getElementById('area').value;
+  const area = document.getElementById('area').value.trim();
   const responsable = document.getElementById('responsable').value.trim();
   const distrito = document.getElementById('distrito').value.trim();
   const direccion = document.getElementById('direccion-texto').value;
 
-  if (!tipo) return toast('Indica el tipo de incidencia', 'error');
+  if (!tipo) return toast('Indica el tipo', 'error');
   if (!currentCoords) return toast('Selecciona la ubicación', 'error');
-  if (!area) return toast('Selecciona un área responsable', 'error');
+  if (!area) return toast('Indica el área responsable', 'error');
 
   const btn = document.getElementById('btn-submit');
-  btn.disabled = true;
-  btn.textContent = 'Guardando...';
+  btn.disabled = true; btn.textContent = 'Guardando...';
 
   const incidencia = {
     id: 'INC-' + Date.now(),
     fecha: new Date().toISOString(),
     tipo, descripcion, area, responsable, distrito, direccion,
-    lat: currentCoords.lat,
-    lng: currentCoords.lng,
-    estado: 'Pendiente',
-    foto: currentPhoto,
-    sincronizada: false
+    lat: currentCoords.lat, lng: currentCoords.lng,
+    estado: 'Pendiente', foto: currentPhoto, sincronizada: false
   };
 
-  // 1. Guardar siempre en local primero (funciona sin conexión)
   const lista = STORE.incidencias;
   lista.unshift(incidencia);
   STORE.incidencias = lista;
 
-  // 2. Intentar sincronizar con Sheets
-  const res = await sendToSheets(incidencia);
+  const res = await apiCall('crear_incidencia', incidencia);
   if (res.ok) {
-    toast('✓ Incidencia registrada y sincronizada', 'success');
-  } else if (res.reason === 'no-url') {
-    toast('Guardada en local. Configura Google Sheets para sincronizar.', 'success');
-  } else if (res.reason === 'no-session') {
+    markSincronizada(incidencia.id);
+    toast('✓ Registrada y sincronizada', 'success');
+  } else if (res.error === 'Sin URL configurada') {
+    toast('Guardada en local. Configura URL.', 'success');
+  } else if (res.error === 'Sin sesión') {
     toast('Sesión caducada. Vuelve a iniciar sesión.', 'error');
   } else {
-    toast('Guardada en local. Error al sincronizar: ' + res.reason, 'error');
+    toast('Guardada local. Error: ' + res.error, 'error');
   }
 
   resetForm();
   btn.disabled = false;
   btn.textContent = 'Registrar incidencia';
-  refreshResponsables();
   updateSyncStatus();
 }
 
@@ -1040,121 +1108,297 @@ function resetForm() {
   currentCoords = null;
   if (marker) { marker.remove(); marker = null; }
   removePhoto();
-  // No reseteamos área/responsable/distrito: muchas incidencias seguidas son de la misma zona
 }
 
-// ===== SINCRONIZACIÓN CON SHEETS =====
-async function sendToSheets(incidencia) {
-  const url = STORE.config.url;
-  if (!url) return { ok: false, reason: 'no-url' };
-
-  // Si no hay sesión válida, no podemos enviar
-  const session = getSavedSession();
-  if (!session) return { ok: false, reason: 'no-session' };
-
-  try {
-    const payload = { ...incidencia, token: session.token };
-    // Apps Script con doPost acepta text/plain sin preflight CORS
-    const r = await fetch(url, {
-      method: 'POST',
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify(payload),
-      redirect: 'follow',
-    });
-
-    if (!r.ok) return { ok: false, reason: 'http-' + r.status };
-
-    const data = await r.json().catch(() => null);
-    if (data && data.ok) {
-      markSincronizada(incidencia.id);
-      return { ok: true };
-    }
-    return { ok: false, reason: (data && data.error) || 'respuesta-no-valida' };
-  } catch (e) {
-    console.error('Error enviando a Sheets:', e);
-    return { ok: false, reason: e.message };
-  }
-}
-
+// =============================================================
+// SINCRONIZACIÓN
+// =============================================================
 function markSincronizada(id) {
   const lista = STORE.incidencias;
   const i = lista.findIndex(x => x.id === id);
-  if (i >= 0) {
-    lista[i].sincronizada = true;
-    STORE.incidencias = lista;
-  }
+  if (i >= 0) { lista[i].sincronizada = true; STORE.incidencias = lista; }
 }
 
 async function syncPendientes() {
-  if (!STORE.config.url) return;
-  if (!getSavedSession()) return;
+  if (!STORE.config.url || !getSavedSession()) return;
   const pendientes = STORE.incidencias.filter(i => !i.sincronizada);
-  let errores = 0;
   for (const inc of pendientes) {
-    const res = await sendToSheets(inc);
-    if (!res.ok) errores++;
-  }
-  if (errores > 0 && pendientes.length > 0) {
-    toast(`${pendientes.length - errores}/${pendientes.length} sincronizadas`, errores ? 'error' : 'success');
+    const res = await apiCall('crear_incidencia', inc);
+    if (res.ok) markSincronizada(inc.id);
   }
   updateSyncStatus();
   refreshListado();
 }
 
 function updateSyncStatus() {
-  const pendientes = STORE.incidencias.filter(i => !i.sincronizada).length;
+  const pend = STORE.incidencias.filter(i => !i.sincronizada).length;
   const el = document.getElementById('sync-status');
   if (!STORE.config.url || !STORE.config.clientId) {
-    el.textContent = '⚙ Sin configurar';
-    el.style.color = 'var(--warning)';
-  } else if (pendientes > 0) {
-    el.textContent = `⏳ ${pendientes} pendiente${pendientes > 1 ? 's' : ''}`;
-    el.style.color = 'var(--warning)';
+    el.textContent = '⚙ Sin configurar'; el.style.color = 'var(--warning)';
+  } else if (pend > 0) {
+    el.textContent = `⏳ ${pend} pendiente${pend > 1 ? 's' : ''}`; el.style.color = 'var(--warning)';
   } else {
-    el.textContent = '✓ Sincronizado';
-    el.style.color = 'var(--success)';
+    el.textContent = '✓ Sincronizado'; el.style.color = 'var(--success)';
   }
 }
 
-// ===== LISTADO =====
+// =============================================================
+// INCIDENCIAS REMOTAS (para Mis incidencias, mapa, dashboard)
+// =============================================================
+async function loadRemoteIncidencias() {
+  const res = await apiCall('obtener_incidencias', { modo_colaborativo: STORE.config.modoColaborativo === true });
+  if (res.ok) STORE.incidenciasRemotas = res.incidencias || [];
+}
+
+function filterIncidencias(filtros) {
+  const remotas = STORE.incidenciasRemotas || [];
+  return remotas.filter(i => {
+    if (filtros.estado && i.estado !== filtros.estado) return false;
+    if (filtros.area && i.area !== filtros.area) return false;
+    if (filtros.distrito && i.distrito !== filtros.distrito) return false;
+    if (filtros.responsable && i.responsable !== filtros.responsable) return false;
+    if (filtros.tipo && i.tipo !== filtros.tipo) return false;
+    return true;
+  });
+}
+
+// =============================================================
+// LISTADO ("Mis incidencias")
+// =============================================================
 function refreshListado() {
-  const lista = STORE.incidencias;
   const cont = document.getElementById('listado-contenido');
-  if (lista.length === 0) {
+  // Combinamos las remotas + las locales pendientes de sincronizar
+  const remotas = STORE.incidenciasRemotas || [];
+  const localesPendientes = STORE.incidencias.filter(i => !i.sincronizada);
+  const todas = [...localesPendientes, ...remotas];
+
+  if (todas.length === 0) {
     cont.innerHTML = '<div class="empty">No hay incidencias todavía.<br>Crea una en la pestaña <strong>Nueva</strong>.</div>';
     return;
   }
-  cont.innerHTML = lista.map(i => `
+
+  cont.innerHTML = todas.map(i => {
+    const estadoClass = (i.estado || 'Pendiente').toLowerCase().replace(' ', '');
+    const sinc = i.sincronizada === false;
+    const puedeResolver = !sinc && i.estado !== 'Resuelto' && (esAdmin || (i.registradoPor && i.registradoPor === currentUser.email.toLowerCase()) || !i.registradoPor);
+    const puedeProceso = !sinc && i.estado === 'Pendiente' && puedeResolver;
+    return `
     <div class="incidencia-card">
       <div class="incidencia-header">
         <div class="incidencia-tipo">${escapeHtml(i.tipo)}</div>
-        <span class="badge badge-${i.estado.toLowerCase().replace(' ', '')}">${i.estado}</span>
+        <span class="badge badge-${estadoClass}">${i.estado || 'Pendiente'}</span>
       </div>
       <div class="incidencia-meta">
-        <strong>Área:</strong> ${escapeHtml(i.area)}<br>
+        ${i.area ? `<strong>Área:</strong> ${escapeHtml(i.area)}<br>` : ''}
         ${i.responsable ? `<strong>Responsable:</strong> ${escapeHtml(i.responsable)}<br>` : ''}
         ${i.distrito ? `<strong>Distrito:</strong> ${escapeHtml(i.distrito)}<br>` : ''}
         ${i.direccion ? `<strong>📍</strong> ${escapeHtml(i.direccion)}<br>` : ''}
         <strong>Fecha:</strong> ${new Date(i.fecha).toLocaleString('es-ES')}<br>
         ${i.descripcion ? `<div style="margin-top:6px;">${escapeHtml(i.descripcion)}</div>` : ''}
-        <div style="margin-top:6px;">
-          <span class="badge ${i.sincronizada ? 'badge-sync' : 'badge-pending-sync'}">
-            ${i.sincronizada ? '☁ Sincronizada' : '⏳ Pendiente sync'}
-          </span>
-        </div>
+        ${sinc ? `<div style="margin-top:6px;"><span class="badge" style="background:#ef444433;color:#ef4444;">⏳ Pendiente sync</span></div>` : ''}
       </div>
-      ${i.foto ? `<img class="incidencia-foto" src="${i.foto}" />` : ''}
+      ${i.fotoUrl ? `<img class="incidencia-foto" src="${i.fotoUrl}" />` : (i.foto ? `<img class="incidencia-foto" src="${i.foto}" />` : '')}
+      ${(puedeProceso || puedeResolver) ? `
+      <div class="action-row">
+        ${puedeProceso ? `<button class="action-btn primary" onclick="cambiarEstado('${i.id}','En Proceso')">▶ En Proceso</button>` : ''}
+        ${puedeResolver ? `<button class="action-btn success" onclick="cambiarEstado('${i.id}','Resuelto')">✓ Marcar resuelto</button>` : ''}
+      </div>` : ''}
+    </div>`;
+  }).join('');
+}
+
+async function cambiarEstado(id, nuevoEstado) {
+  if (nuevoEstado === 'Resuelto' && !confirm('¿Marcar como resuelta?')) return;
+  const res = await apiCall('actualizar_estado', { id, estado: nuevoEstado });
+  if (res.ok) {
+    toast('✓ Estado actualizado', 'success');
+    await loadRemoteIncidencias();
+    refreshListado();
+  } else {
+    toast('Error: ' + res.error, 'error');
+  }
+}
+
+// =============================================================
+// DASHBOARD
+// =============================================================
+function refreshDashboard() {
+  const incs = filterIncidencias({
+    area: document.getElementById('filt-dash-area').value,
+    distrito: document.getElementById('filt-dash-distrito').value,
+    responsable: document.getElementById('filt-dash-responsable').value,
+    tipo: document.getElementById('filt-dash-tipo').value,
+  });
+
+  const total = incs.length;
+  const pend = incs.filter(i => i.estado === 'Pendiente').length;
+  const proc = incs.filter(i => i.estado === 'En Proceso').length;
+  const resu = incs.filter(i => i.estado === 'Resuelto').length;
+
+  // Tiempo medio de resolución (de los resueltos)
+  const tiempos = incs.filter(i => i.estado === 'Resuelto' && i.fechaResolucion && i.fecha)
+    .map(i => (new Date(i.fechaResolucion) - new Date(i.fecha)) / (1000 * 60 * 60 * 24));
+  const medioDias = tiempos.length ? (tiempos.reduce((a, b) => a + b, 0) / tiempos.length).toFixed(1) : '–';
+
+  document.getElementById('stats-grid').innerHTML = `
+    <div class="stat-card"><div class="label">Total</div><div class="value">${total}</div></div>
+    <div class="stat-card pendiente"><div class="label">Pendientes</div><div class="value">${pend}</div></div>
+    <div class="stat-card proceso"><div class="label">En proceso</div><div class="value">${proc}</div></div>
+    <div class="stat-card resuelto"><div class="label">Resueltas</div><div class="value">${resu}</div></div>
+    <div class="stat-card"><div class="label">Días medios resolución</div><div class="value">${medioDias}</div></div>
+  `;
+
+  // Desgloses por área, responsable, distrito
+  const breakdownArea = breakdown(incs, 'area');
+  const breakdownResp = breakdown(incs, 'responsable');
+  const breakdownDist = breakdown(incs, 'distrito');
+
+  document.getElementById('stats-breakdown').innerHTML = `
+    <div class="config-section"><h2>Por área</h2>${renderBreakdown(breakdownArea, total)}</div>
+    <div class="config-section"><h2>Por responsable</h2>${renderBreakdown(breakdownResp, total)}</div>
+    <div class="config-section"><h2>Por distrito</h2>${renderBreakdown(breakdownDist, total)}</div>
+  `;
+}
+
+function breakdown(incs, campo) {
+  const counts = {};
+  incs.forEach(i => {
+    const k = (i[campo] || '(sin asignar)').trim() || '(sin asignar)';
+    counts[k] = (counts[k] || 0) + 1;
+  });
+  return Object.entries(counts).sort((a, b) => b[1] - a[1]);
+}
+
+function renderBreakdown(entries, total) {
+  if (entries.length === 0) return '<p style="color:var(--text-dim);font-size:13px;">Sin datos</p>';
+  return entries.map(([k, v]) => {
+    const pct = total ? Math.round(v / total * 100) : 0;
+    return `
+      <div style="margin-bottom:8px;">
+        <div style="display:flex;justify-content:space-between;font-size:13px;margin-bottom:3px;">
+          <span>${escapeHtml(k)}</span>
+          <span style="color:var(--text-dim);">${v} · ${pct}%</span>
+        </div>
+        <div style="background:var(--surface-2);height:6px;border-radius:3px;overflow:hidden;">
+          <div style="background:var(--accent);height:100%;width:${pct}%;"></div>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+// =============================================================
+// ADMIN: GESTIÓN DE LISTAS
+// =============================================================
+function refreshListasEditor() {
+  const listas = STORE.listas || {};
+  const tipos = ['tipos', 'areas', 'responsables', 'distritos'];
+  const labels = {
+    tipos: '📋 Tipos de incidencia',
+    areas: '🏛 Áreas',
+    responsables: '👤 Responsables',
+    distritos: '📍 Distritos'
+  };
+  document.getElementById('listas-editores').innerHTML = tipos.map(t => {
+    const items = listas[t] || [];
+    return `
+      <div class="list-editor">
+        <h3>${labels[t]}</h3>
+        <div id="lista-${t}">
+          ${items.map((v, idx) => `
+            <div class="list-item">
+              <span>${escapeHtml(v)}</span>
+              <button onclick="removeListItem('${t}', ${idx})">✕</button>
+            </div>
+          `).join('')}
+        </div>
+        <div class="add-row">
+          <input type="text" id="add-${t}" placeholder="Añadir nuevo..." />
+          <button onclick="addListItem('${t}')">Añadir</button>
+        </div>
+      </div>`;
+  }).join('');
+}
+
+async function addListItem(tipo) {
+  const inp = document.getElementById('add-' + tipo);
+  const v = inp.value.trim();
+  if (!v) return;
+  const listas = { ...STORE.listas };
+  if (!listas[tipo]) listas[tipo] = [];
+  if (listas[tipo].includes(v)) return toast('Ya existe', 'error');
+  listas[tipo].push(v);
+  await guardarListas(listas);
+  inp.value = '';
+}
+
+async function removeListItem(tipo, idx) {
+  if (!confirm('¿Eliminar este elemento?')) return;
+  const listas = { ...STORE.listas };
+  listas[tipo].splice(idx, 1);
+  await guardarListas(listas);
+}
+
+async function guardarListas(listas) {
+  // Conservar correos_autorizados que no se editan aquí
+  listas.correos_autorizados = STORE.listas.correos_autorizados || [];
+  const res = await apiCall('actualizar_listas', { listas });
+  if (res.ok) {
+    STORE.listas = listas;
+    aplicarListasAFormulario();
+    refreshListasEditor();
+    toast('Listas actualizadas', 'success');
+  } else {
+    toast('Error: ' + res.error, 'error');
+  }
+}
+
+// ADMIN: AUTORIZADOS
+async function refreshAutorizados() {
+  const res = await apiCall('obtener_autorizados');
+  if (!res.ok) {
+    document.getElementById('autorizados-list').innerHTML = '<p style="color:var(--danger);font-size:13px;">' + escapeHtml(res.error || 'Error') + '</p>';
+    return;
+  }
+  const correos = res.correos || [];
+  document.getElementById('autorizados-list').innerHTML = correos.map((c, idx) => `
+    <div class="list-item">
+      <span>${escapeHtml(c)}</span>
+      <button onclick="removeAutorizado(${idx})">✕</button>
     </div>
-  `).join('');
+  `).join('') || '<p style="color:var(--text-dim);font-size:13px;">No hay correos autorizados aún.</p>';
 }
 
-function refreshResponsables() {
-  const datalist = document.getElementById('responsables-comunes');
-  const responsables = [...new Set(STORE.incidencias.map(i => i.responsable).filter(Boolean))];
-  datalist.innerHTML = responsables.map(r => `<option value="${escapeHtml(r)}">`).join('');
+async function addAutorizado() {
+  const inp = document.getElementById('autorizados-input');
+  const v = inp.value.trim().toLowerCase();
+  if (!v || !v.includes('@')) return toast('Correo no válido', 'error');
+  const res1 = await apiCall('obtener_autorizados');
+  if (!res1.ok) return toast('Error: ' + res1.error, 'error');
+  const correos = res1.correos || [];
+  if (correos.includes(v)) return toast('Ya está autorizado', 'error');
+  correos.push(v);
+  const res = await apiCall('actualizar_autorizados', { correos });
+  if (res.ok) {
+    inp.value = '';
+    refreshAutorizados();
+    toast('Correo autorizado', 'success');
+  } else { toast('Error: ' + res.error, 'error'); }
 }
 
-// ===== CONFIG =====
+async function removeAutorizado(idx) {
+  if (!confirm('¿Revocar acceso a este correo?')) return;
+  const res1 = await apiCall('obtener_autorizados');
+  if (!res1.ok) return toast('Error: ' + res1.error, 'error');
+  const correos = res1.correos || [];
+  correos.splice(idx, 1);
+  const res = await apiCall('actualizar_autorizados', { correos });
+  if (res.ok) { refreshAutorizados(); toast('Acceso revocado', 'success'); }
+  else toast('Error: ' + res.error, 'error');
+}
+
+// =============================================================
+// CONFIG (admin)
+// =============================================================
 function initConfig() {
   const urlEl = document.getElementById('config-url');
   const cidEl = document.getElementById('config-client-id');
@@ -1162,41 +1406,43 @@ function initConfig() {
   if (cidEl) cidEl.value = STORE.config.clientId || '';
 
   const btnSave = document.getElementById('btn-save-config');
-  if (btnSave) {
-    btnSave.addEventListener('click', () => {
-      const url = document.getElementById('config-url').value.trim();
-      const clientId = document.getElementById('config-client-id').value.trim();
-      STORE.config = { ...STORE.config, url, clientId };
-      toast('Configuración guardada. Recarga la página para aplicar.', 'success');
-      updateSyncStatus();
-    });
-  }
+  if (btnSave) btnSave.addEventListener('click', () => {
+    const url = document.getElementById('config-url').value.trim();
+    const clientId = document.getElementById('config-client-id').value.trim();
+    STORE.config = { ...STORE.config, url, clientId };
+    toast('Guardado. Recarga la página.', 'success');
+    updateSyncStatus();
+  });
+
+  const btnInit = document.getElementById('btn-inicializar');
+  if (btnInit) btnInit.addEventListener('click', async () => {
+    const res = await apiCall('inicializar_config');
+    if (res.ok) { toast('Config inicializada', 'success'); await cargarListas(); refreshListasEditor(); }
+    else toast('Error: ' + res.error, 'error');
+  });
 
   const btnSync = document.getElementById('btn-sync');
-  if (btnSync) {
-    btnSync.addEventListener('click', async () => {
-      if (!STORE.config.url) return toast('Configura primero la URL de Sheets', 'error');
-      if (!getSavedSession()) return toast('Inicia sesión primero', 'error');
-      toast('Sincronizando...');
-      await syncPendientes();
-      toast('Sincronización completada', 'success');
-    });
-  }
+  if (btnSync) btnSync.addEventListener('click', async () => {
+    if (!STORE.config.url) return toast('Configura URL', 'error');
+    if (!getSavedSession()) return toast('Inicia sesión', 'error');
+    toast('Sincronizando...');
+    await syncPendientes();
+    toast('Listo', 'success');
+  });
 
   const btnClear = document.getElementById('btn-clear');
-  if (btnClear) {
-    btnClear.addEventListener('click', () => {
-      if (confirm('¿Borrar todas las incidencias locales? Esto no afecta a Google Sheets.')) {
-        STORE.incidencias = [];
-        refreshListado();
-        updateSyncStatus();
-        toast('Datos locales borrados', 'success');
-      }
-    });
-  }
+  if (btnClear) btnClear.addEventListener('click', () => {
+    if (confirm('¿Borrar incidencias locales? No afecta a Sheets.')) {
+      STORE.incidencias = [];
+      refreshListado(); updateSyncStatus();
+      toast('Borrado', 'success');
+    }
+  });
 }
 
-// ===== UTILS =====
+// =============================================================
+// UTILS
+// =============================================================
 function toast(msg, type) {
   const t = document.getElementById('toast');
   t.textContent = msg;
