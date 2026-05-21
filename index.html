@@ -4,11 +4,10 @@
 <meta charset="UTF-8" />
 <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
 <meta name="theme-color" content="#0f172a" />
-<title>Incidencias</title>
+<title>Incidencias Municipales</title>
 
 <!-- PWA: permite instalar la app en móvil/escritorio -->
 <link rel="manifest" href="manifest.json" />
-<link rel="apple-touch-icon" href="icon-192.png" />
 
 <!-- Leaflet: mapa interactivo -->
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
@@ -706,6 +705,9 @@ function initLogin() {
     client_id: clientId,
     callback: handleCredentialResponse,
     auto_select: false,
+    use_fedcm_for_prompt: true,  // evita problemas COOP en navegadores recientes
+    ux_mode: 'popup',
+    itp_support: true,
   });
 
   // Renderizar botón de login
