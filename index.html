@@ -1,0 +1,971 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+<meta name="theme-color" content="#0f172a" />
+<title>Incidencias Municipales</title>
+
+<!-- PWA: permite instalar la app en móvil/escritorio -->
+<link rel="manifest" href="manifest.json" />
+<link rel="apple-touch-icon" href="icon-192.png" />
+
+<!-- Leaflet: mapa interactivo -->
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.css" />
+<script src="https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/leaflet.min.js"></script>
+
+<style>
+  :root {
+    --bg: #0f172a;
+    --surface: #1e293b;
+    --surface-2: #334155;
+    --border: #475569;
+    --text: #f1f5f9;
+    --text-dim: #94a3b8;
+    --accent: #38bdf8;
+    --accent-dark: #0284c7;
+    --success: #10b981;
+    --danger: #ef4444;
+    --warning: #f59e0b;
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    min-height: 100vh;
+    padding: 0;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  .app {
+    max-width: 720px;
+    margin: 0 auto;
+    padding: 16px;
+    padding-bottom: 100px;
+  }
+
+  header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 8px 0 20px;
+  }
+
+  header h1 {
+    font-size: 22px;
+    font-weight: 600;
+    letter-spacing: -0.5px;
+  }
+
+  header h1 span {
+    color: var(--accent);
+  }
+
+  .tabs {
+    display: flex;
+    gap: 4px;
+    background: var(--surface);
+    padding: 4px;
+    border-radius: 12px;
+    margin-bottom: 20px;
+  }
+
+  .tab {
+    flex: 1;
+    padding: 10px;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    font-size: 14px;
+    font-weight: 500;
+    border-radius: 8px;
+    cursor: pointer;
+    transition: all 0.2s;
+  }
+
+  .tab.active {
+    background: var(--accent-dark);
+    color: white;
+  }
+
+  /* ---- FORMULARIO ---- */
+
+  .form-group {
+    margin-bottom: 16px;
+  }
+
+  label {
+    display: block;
+    font-size: 13px;
+    font-weight: 500;
+    color: var(--text-dim);
+    margin-bottom: 6px;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  input, select, textarea {
+    width: 100%;
+    padding: 12px 14px;
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 10px;
+    color: var(--text);
+    font-size: 15px;
+    font-family: inherit;
+    transition: border-color 0.2s;
+  }
+
+  input:focus, select:focus, textarea:focus {
+    outline: none;
+    border-color: var(--accent);
+  }
+
+  textarea {
+    resize: vertical;
+    min-height: 80px;
+  }
+
+  /* ---- MAPA ---- */
+
+  .location-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+
+  .loc-buttons {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+    margin-bottom: 12px;
+  }
+
+  .loc-btn {
+    padding: 10px;
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    color: var(--text);
+    border-radius: 8px;
+    font-size: 13px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 6px;
+    transition: background 0.2s;
+  }
+
+  .loc-btn:hover { background: var(--border); }
+  .loc-btn:active { transform: scale(0.98); }
+
+  .search-row {
+    display: flex;
+    gap: 6px;
+    margin-bottom: 12px;
+  }
+
+  .search-row input { flex: 1; }
+
+  .search-row button {
+    padding: 0 14px;
+    background: var(--accent-dark);
+    border: none;
+    color: white;
+    border-radius: 10px;
+    font-weight: 500;
+    cursor: pointer;
+    white-space: nowrap;
+  }
+
+  #map {
+    height: 280px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: #1a2332;
+  }
+
+  .coords-display {
+    font-size: 12px;
+    color: var(--text-dim);
+    margin-top: 8px;
+    font-family: monospace;
+    text-align: center;
+  }
+
+  /* ---- FOTO ---- */
+
+  .photo-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 12px;
+    margin-bottom: 16px;
+  }
+
+  .photo-btn-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 8px;
+  }
+
+  .photo-btn {
+    padding: 14px;
+    background: var(--surface-2);
+    border: 1px dashed var(--border);
+    color: var(--text);
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    cursor: pointer;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+  }
+
+  .photo-btn .icon { font-size: 24px; }
+
+  .photo-preview {
+    margin-top: 12px;
+    position: relative;
+    border-radius: 10px;
+    overflow: hidden;
+  }
+
+  .photo-preview img {
+    width: 100%;
+    display: block;
+    max-height: 300px;
+    object-fit: cover;
+  }
+
+  .photo-remove {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    background: rgba(0,0,0,0.7);
+    color: white;
+    border: none;
+    width: 32px;
+    height: 32px;
+    border-radius: 50%;
+    cursor: pointer;
+    font-size: 16px;
+  }
+
+  input[type="file"] { display: none; }
+
+  /* ---- BOTÓN PRINCIPAL ---- */
+
+  .submit-btn {
+    width: 100%;
+    padding: 16px;
+    background: var(--accent);
+    border: none;
+    color: var(--bg);
+    border-radius: 12px;
+    font-size: 16px;
+    font-weight: 600;
+    cursor: pointer;
+    margin-top: 8px;
+    transition: all 0.2s;
+  }
+
+  .submit-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+  }
+
+  .submit-btn:active:not(:disabled) { transform: scale(0.98); }
+
+  /* ---- LISTADO ---- */
+
+  .incidencia-card {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 14px;
+    margin-bottom: 12px;
+  }
+
+  .incidencia-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 8px;
+  }
+
+  .incidencia-tipo {
+    font-weight: 600;
+    font-size: 15px;
+  }
+
+  .badge {
+    font-size: 11px;
+    padding: 4px 8px;
+    border-radius: 6px;
+    font-weight: 600;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+  }
+
+  .badge-pendiente { background: #f59e0b33; color: #f59e0b; }
+  .badge-proceso { background: #38bdf833; color: #38bdf8; }
+  .badge-resuelto { background: #10b98133; color: #10b981; }
+  .badge-sync { background: #6366f133; color: #818cf8; }
+  .badge-pending-sync { background: #ef444433; color: #ef4444; }
+
+  .incidencia-meta {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.6;
+  }
+
+  .incidencia-foto {
+    width: 100%;
+    border-radius: 8px;
+    margin-top: 10px;
+    max-height: 200px;
+    object-fit: cover;
+  }
+
+  /* ---- TOAST ---- */
+
+  .toast {
+    position: fixed;
+    bottom: 24px;
+    left: 50%;
+    transform: translateX(-50%) translateY(120%);
+    background: var(--surface-2);
+    border: 1px solid var(--border);
+    padding: 12px 20px;
+    border-radius: 10px;
+    font-size: 14px;
+    font-weight: 500;
+    transition: transform 0.3s;
+    z-index: 1000;
+    max-width: 90%;
+    text-align: center;
+  }
+
+  .toast.show { transform: translateX(-50%) translateY(0); }
+  .toast.success { border-color: var(--success); }
+  .toast.error { border-color: var(--danger); }
+
+  /* ---- CONFIG ---- */
+
+  .config-section {
+    background: var(--surface);
+    border: 1px solid var(--border);
+    border-radius: 12px;
+    padding: 16px;
+    margin-bottom: 16px;
+  }
+
+  .config-section h2 {
+    font-size: 16px;
+    margin-bottom: 12px;
+  }
+
+  .config-section p {
+    font-size: 13px;
+    color: var(--text-dim);
+    line-height: 1.6;
+    margin-bottom: 10px;
+  }
+
+  .config-section .url-input {
+    font-family: monospace;
+    font-size: 12px;
+  }
+
+  .empty {
+    text-align: center;
+    color: var(--text-dim);
+    padding: 40px 20px;
+    font-size: 14px;
+  }
+
+  .leaflet-container { font-family: inherit; }
+
+  footer {
+    text-align: center;
+    padding: 20px 16px 8px;
+    font-size: 12px;
+    color: var(--text-dim);
+    border-top: 1px solid var(--border);
+    margin-top: 24px;
+  }
+
+  footer .author {
+    color: var(--accent);
+    font-weight: 500;
+  }
+
+  @media (max-width: 480px) {
+    header h1 { font-size: 18px; }
+    .app { padding: 12px; }
+  }
+</style>
+</head>
+<body>
+
+<div class="app">
+  <header>
+    <h1>Inci<span>·</span>dencias</h1>
+    <div id="sync-status" style="font-size:12px;color:var(--text-dim);"></div>
+  </header>
+
+  <div class="tabs">
+    <button class="tab active" data-tab="nueva">Nueva</button>
+    <button class="tab" data-tab="listado">Listado</button>
+    <button class="tab" data-tab="config">Config</button>
+  </div>
+
+  <!-- ===== TAB: NUEVA INCIDENCIA ===== -->
+  <div id="tab-nueva" class="tab-content">
+    <div class="form-group">
+      <label>Tipo de incidencia</label>
+      <input type="text" id="tipo" placeholder="Farola fundida, contenedor roto, pintada..." list="tipos-comunes" />
+      <datalist id="tipos-comunes">
+        <option value="Farola fundida">
+        <option value="Contenedor dañado">
+        <option value="Pintada / Grafiti">
+        <option value="Mobiliario urbano roto">
+        <option value="Árbol caído / poda">
+        <option value="Bache / asfalto">
+        <option value="Señalización dañada">
+        <option value="Acera levantada">
+        <option value="Fuga de agua">
+        <option value="Jardinería / mantenimiento">
+      </datalist>
+    </div>
+
+    <div class="form-group">
+      <label>Descripción</label>
+      <textarea id="descripcion" placeholder="Detalla la incidencia..."></textarea>
+    </div>
+
+    <!-- UBICACIÓN -->
+    <label>Ubicación</label>
+    <div class="location-section">
+      <div class="loc-buttons">
+        <button class="loc-btn" id="btn-gps">📍 Usar mi GPS</button>
+        <button class="loc-btn" id="btn-tap">👆 Tocar en mapa</button>
+      </div>
+      <div class="search-row">
+        <input type="text" id="direccion-search" placeholder="Buscar dirección..." />
+        <button id="btn-search">Buscar</button>
+      </div>
+      <div id="map"></div>
+      <div class="coords-display" id="coords-display">Sin ubicación seleccionada</div>
+      <input type="hidden" id="direccion-texto" />
+    </div>
+
+    <!-- FOTO -->
+    <label>Fotografía</label>
+    <div class="photo-section">
+      <div class="photo-btn-row">
+        <label class="photo-btn" for="foto-camera">
+          <span class="icon">📷</span>
+          <span>Cámara</span>
+        </label>
+        <label class="photo-btn" for="foto-galeria">
+          <span class="icon">🖼️</span>
+          <span>Galería</span>
+        </label>
+      </div>
+      <input type="file" id="foto-camera" accept="image/*" capture="environment" />
+      <input type="file" id="foto-galeria" accept="image/*" />
+      <div id="foto-preview"></div>
+    </div>
+
+    <div class="form-group">
+      <label>Área responsable</label>
+      <select id="area">
+        <option value="">Selecciona un área...</option>
+        <option value="Verde Urbano">Verde Urbano</option>
+        <option value="Mantenimiento de Espacio Público">Mantenimiento de Espacio Público</option>
+        <option value="Limpieza Viaria">Limpieza Viaria</option>
+        <option value="Alumbrado Público">Alumbrado Público</option>
+        <option value="Movilidad y Tráfico">Movilidad y Tráfico</option>
+        <option value="Aguas">Aguas</option>
+        <option value="Otros">Otros</option>
+      </select>
+    </div>
+
+    <div class="form-group">
+      <label>Técnico responsable</label>
+      <input type="text" id="responsable" placeholder="Nombre del responsable" list="responsables-comunes" />
+      <datalist id="responsables-comunes"></datalist>
+    </div>
+
+    <div class="form-group">
+      <label>Distrito / Zona</label>
+      <input type="text" id="distrito" placeholder="Distrito o zona" />
+    </div>
+
+    <button class="submit-btn" id="btn-submit">Registrar incidencia</button>
+  </div>
+
+  <!-- ===== TAB: LISTADO ===== -->
+  <div id="tab-listado" class="tab-content" style="display:none;">
+    <div id="listado-contenido"></div>
+  </div>
+
+  <!-- ===== TAB: CONFIGURACIÓN ===== -->
+  <div id="tab-config" class="tab-content" style="display:none;">
+    <div class="config-section">
+      <h2>Conexión con Google Sheets</h2>
+      <p>Pega aquí la URL de tu Apps Script (la que termina en <code>/exec</code>). Mientras esté vacía, las incidencias se guardan solo en este dispositivo y se sincronizarán cuando la configures.</p>
+      <input type="text" id="config-url" class="url-input" placeholder="https://script.google.com/macros/s/.../exec" />
+
+      <p style="margin-top:16px;">Clave de acceso. Tiene que ser exactamente la misma que has puesto en el script. Sin esta clave, el script rechaza las incidencias.</p>
+      <input type="password" id="config-clave" class="url-input" placeholder="Clave secreta" />
+      <div style="margin-top:6px;">
+        <label style="display:inline-flex;align-items:center;gap:6px;color:var(--text-dim);font-size:12px;text-transform:none;letter-spacing:0;cursor:pointer;">
+          <input type="checkbox" id="show-clave" style="width:auto;margin:0;" /> Ver clave
+        </label>
+      </div>
+
+      <button class="submit-btn" id="btn-save-config" style="margin-top:12px;">Guardar configuración</button>
+    </div>
+
+    <div class="config-section">
+      <h2>Sincronización</h2>
+      <p id="sync-info">Las incidencias pendientes se enviarán automáticamente.</p>
+      <button class="submit-btn" id="btn-sync" style="background:var(--surface-2);color:var(--text);">Sincronizar ahora</button>
+    </div>
+
+    <div class="config-section">
+      <h2>Datos locales</h2>
+      <p>Las incidencias se guardan en este dispositivo aunque no haya conexión, y se sincronizan después.</p>
+      <button class="submit-btn" id="btn-clear" style="background:var(--danger);">Borrar todo lo local</button>
+    </div>
+  </div>
+</div>
+
+<div class="toast" id="toast"></div>
+
+<footer>
+  Aplicación generada por <span class="author">Andrés</span> · <span id="footer-year"></span>
+</footer>
+
+<script>
+// ===== ESTADO =====
+const STORE = {
+  get incidencias() {
+    return JSON.parse(localStorage.getItem('incidencias') || '[]');
+  },
+  set incidencias(val) {
+    localStorage.setItem('incidencias', JSON.stringify(val));
+  },
+  get config() {
+    return JSON.parse(localStorage.getItem('config') || '{}');
+  },
+  set config(val) {
+    localStorage.setItem('config', JSON.stringify(val));
+  }
+};
+
+let map, marker;
+let currentPhoto = null;
+let currentCoords = null;
+
+// ===== INIT =====
+document.addEventListener('DOMContentLoaded', () => {
+  document.getElementById('footer-year').textContent = new Date().getFullYear();
+  initMap();
+  initTabs();
+  initForm();
+  initConfig();
+  refreshListado();
+  refreshResponsables();
+  updateSyncStatus();
+  // Intenta sincronizar pendientes al abrir
+  if (navigator.onLine) syncPendientes();
+  window.addEventListener('online', syncPendientes);
+});
+
+// ===== MAPA =====
+function initMap() {
+  // Centro inicial: Sant Boi de Llobregat
+  map = L.map('map').setView([41.3429, 2.0364], 14);
+
+  L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+    maxZoom: 19,
+    attribution: '© OpenStreetMap'
+  }).addTo(map);
+
+  // Tocar en mapa coloca pin
+  map.on('click', (e) => setMarker(e.latlng.lat, e.latlng.lng));
+}
+
+function setMarker(lat, lng, label) {
+  if (marker) marker.remove();
+  marker = L.marker([lat, lng], { draggable: true }).addTo(map);
+  marker.on('dragend', () => {
+    const p = marker.getLatLng();
+    updateCoords(p.lat, p.lng);
+  });
+  map.setView([lat, lng], 17);
+  updateCoords(lat, lng, label);
+}
+
+function updateCoords(lat, lng, label) {
+  currentCoords = { lat, lng };
+  const display = document.getElementById('coords-display');
+  display.innerHTML = `📍 ${lat.toFixed(6)}, ${lng.toFixed(6)}${label ? '<br>' + label : ''}`;
+  // Reverse geocode si no hay etiqueta
+  if (!label) reverseGeocode(lat, lng);
+}
+
+async function reverseGeocode(lat, lng) {
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/reverse?format=json&lat=${lat}&lon=${lng}&accept-language=es`);
+    const data = await r.json();
+    if (data.display_name) {
+      document.getElementById('direccion-texto').value = data.display_name;
+      document.getElementById('coords-display').innerHTML =
+        `📍 ${lat.toFixed(6)}, ${lng.toFixed(6)}<br><span style="color:var(--text);">${data.display_name}</span>`;
+    }
+  } catch (e) { /* sin red, no pasa nada */ }
+}
+
+document.getElementById('btn-gps').addEventListener('click', () => {
+  if (!navigator.geolocation) {
+    toast('GPS no disponible en este dispositivo', 'error');
+    return;
+  }
+  toast('Localizando...');
+  navigator.geolocation.getCurrentPosition(
+    (pos) => setMarker(pos.coords.latitude, pos.coords.longitude),
+    (err) => toast('No se pudo obtener GPS: ' + err.message, 'error'),
+    { enableHighAccuracy: true, timeout: 10000 }
+  );
+});
+
+document.getElementById('btn-tap').addEventListener('click', () => {
+  toast('Toca el punto exacto en el mapa');
+  map.scrollIntoView({ behavior: 'smooth', block: 'center' });
+});
+
+document.getElementById('btn-search').addEventListener('click', searchDireccion);
+document.getElementById('direccion-search').addEventListener('keypress', (e) => {
+  if (e.key === 'Enter') { e.preventDefault(); searchDireccion(); }
+});
+
+async function searchDireccion() {
+  const q = document.getElementById('direccion-search').value.trim();
+  if (!q) return;
+  try {
+    const r = await fetch(`https://nominatim.openstreetmap.org/search?format=json&q=${encodeURIComponent(q)}&limit=1&accept-language=es`);
+    const data = await r.json();
+    if (data.length === 0) {
+      toast('No se encontró la dirección', 'error');
+      return;
+    }
+    const { lat, lon, display_name } = data[0];
+    setMarker(parseFloat(lat), parseFloat(lon), display_name);
+    document.getElementById('direccion-texto').value = display_name;
+  } catch (e) {
+    toast('Error buscando dirección', 'error');
+  }
+}
+
+// ===== FOTO =====
+['foto-camera', 'foto-galeria'].forEach(id => {
+  document.getElementById(id).addEventListener('change', handleFoto);
+});
+
+async function handleFoto(e) {
+  const file = e.target.files[0];
+  if (!file) return;
+  // Comprime para que no pese mucho en local ni al subirla
+  const compressed = await compressImage(file, 1280, 0.75);
+  currentPhoto = compressed;
+  showPhotoPreview(compressed);
+}
+
+function compressImage(file, maxDim, quality) {
+  return new Promise((resolve) => {
+    const reader = new FileReader();
+    reader.onload = (e) => {
+      const img = new Image();
+      img.onload = () => {
+        const canvas = document.createElement('canvas');
+        let { width, height } = img;
+        if (width > height && width > maxDim) {
+          height *= maxDim / width;
+          width = maxDim;
+        } else if (height > maxDim) {
+          width *= maxDim / height;
+          height = maxDim;
+        }
+        canvas.width = width;
+        canvas.height = height;
+        canvas.getContext('2d').drawImage(img, 0, 0, width, height);
+        resolve(canvas.toDataURL('image/jpeg', quality));
+      };
+      img.src = e.target.result;
+    };
+    reader.readAsDataURL(file);
+  });
+}
+
+function showPhotoPreview(dataUrl) {
+  document.getElementById('foto-preview').innerHTML = `
+    <div class="photo-preview">
+      <img src="${dataUrl}" />
+      <button class="photo-remove" onclick="removePhoto()">✕</button>
+    </div>
+  `;
+}
+
+function removePhoto() {
+  currentPhoto = null;
+  document.getElementById('foto-preview').innerHTML = '';
+  document.getElementById('foto-camera').value = '';
+  document.getElementById('foto-galeria').value = '';
+}
+
+// ===== TABS =====
+function initTabs() {
+  document.querySelectorAll('.tab').forEach(t => {
+    t.addEventListener('click', () => {
+      document.querySelectorAll('.tab').forEach(x => x.classList.remove('active'));
+      t.classList.add('active');
+      document.querySelectorAll('.tab-content').forEach(c => c.style.display = 'none');
+      document.getElementById('tab-' + t.dataset.tab).style.display = 'block';
+      if (t.dataset.tab === 'listado') refreshListado();
+      if (t.dataset.tab === 'nueva' && map) {
+        setTimeout(() => map.invalidateSize(), 100);
+      }
+    });
+  });
+}
+
+// ===== FORMULARIO =====
+function initForm() {
+  document.getElementById('btn-submit').addEventListener('click', submitIncidencia);
+}
+
+async function submitIncidencia() {
+  const tipo = document.getElementById('tipo').value.trim();
+  const descripcion = document.getElementById('descripcion').value.trim();
+  const area = document.getElementById('area').value;
+  const responsable = document.getElementById('responsable').value.trim();
+  const distrito = document.getElementById('distrito').value.trim();
+  const direccion = document.getElementById('direccion-texto').value;
+
+  if (!tipo) return toast('Indica el tipo de incidencia', 'error');
+  if (!currentCoords) return toast('Selecciona la ubicación', 'error');
+  if (!area) return toast('Selecciona un área responsable', 'error');
+
+  const btn = document.getElementById('btn-submit');
+  btn.disabled = true;
+  btn.textContent = 'Guardando...';
+
+  const incidencia = {
+    id: 'INC-' + Date.now(),
+    fecha: new Date().toISOString(),
+    tipo, descripcion, area, responsable, distrito, direccion,
+    lat: currentCoords.lat,
+    lng: currentCoords.lng,
+    estado: 'Pendiente',
+    foto: currentPhoto,
+    sincronizada: false
+  };
+
+  // 1. Guardar siempre en local primero (funciona sin conexión)
+  const lista = STORE.incidencias;
+  lista.unshift(incidencia);
+  STORE.incidencias = lista;
+
+  // 2. Intentar sincronizar con Sheets
+  const ok = await sendToSheets(incidencia);
+  if (ok) {
+    toast('✓ Incidencia registrada y sincronizada', 'success');
+  } else if (STORE.config.url) {
+    toast('Guardada en local. Se sincronizará cuando haya conexión.', 'success');
+  } else {
+    toast('Guardada en local. Configura Google Sheets para sincronizar.', 'success');
+  }
+
+  resetForm();
+  btn.disabled = false;
+  btn.textContent = 'Registrar incidencia';
+  refreshResponsables();
+  updateSyncStatus();
+}
+
+function resetForm() {
+  document.getElementById('tipo').value = '';
+  document.getElementById('descripcion').value = '';
+  document.getElementById('direccion-search').value = '';
+  document.getElementById('direccion-texto').value = '';
+  document.getElementById('coords-display').textContent = 'Sin ubicación seleccionada';
+  currentCoords = null;
+  if (marker) { marker.remove(); marker = null; }
+  removePhoto();
+  // No reseteamos área/responsable/distrito: muchas incidencias seguidas son de la misma zona
+}
+
+// ===== SINCRONIZACIÓN CON SHEETS =====
+async function sendToSheets(incidencia) {
+  const url = STORE.config.url;
+  if (!url) return false;
+  try {
+    // Adjuntar la clave secreta al payload (no se guarda en la incidencia local)
+    const payload = { ...incidencia, clave: STORE.config.clave || '' };
+    const r = await fetch(url, {
+      method: 'POST',
+      mode: 'no-cors', // Apps Script requiere esto
+      headers: { 'Content-Type': 'text/plain' },
+      body: JSON.stringify(payload)
+    });
+    // Con no-cors no podemos leer la respuesta, así que asumimos éxito si no hay excepción
+    // y marcamos como sincronizada
+    markSincronizada(incidencia.id);
+    return true;
+  } catch (e) {
+    console.error('Error enviando a Sheets:', e);
+    return false;
+  }
+}
+
+function markSincronizada(id) {
+  const lista = STORE.incidencias;
+  const i = lista.findIndex(x => x.id === id);
+  if (i >= 0) {
+    lista[i].sincronizada = true;
+    STORE.incidencias = lista;
+  }
+}
+
+async function syncPendientes() {
+  if (!STORE.config.url) return;
+  const pendientes = STORE.incidencias.filter(i => !i.sincronizada);
+  for (const inc of pendientes) {
+    await sendToSheets(inc);
+  }
+  updateSyncStatus();
+  refreshListado();
+}
+
+function updateSyncStatus() {
+  const pendientes = STORE.incidencias.filter(i => !i.sincronizada).length;
+  const el = document.getElementById('sync-status');
+  if (!STORE.config.url) {
+    el.textContent = '⚙ Sin configurar';
+    el.style.color = 'var(--warning)';
+  } else if (pendientes > 0) {
+    el.textContent = `⏳ ${pendientes} pendiente${pendientes > 1 ? 's' : ''}`;
+    el.style.color = 'var(--warning)';
+  } else {
+    el.textContent = '✓ Sincronizado';
+    el.style.color = 'var(--success)';
+  }
+}
+
+// ===== LISTADO =====
+function refreshListado() {
+  const lista = STORE.incidencias;
+  const cont = document.getElementById('listado-contenido');
+  if (lista.length === 0) {
+    cont.innerHTML = '<div class="empty">No hay incidencias todavía.<br>Crea una en la pestaña <strong>Nueva</strong>.</div>';
+    return;
+  }
+  cont.innerHTML = lista.map(i => `
+    <div class="incidencia-card">
+      <div class="incidencia-header">
+        <div class="incidencia-tipo">${escapeHtml(i.tipo)}</div>
+        <span class="badge badge-${i.estado.toLowerCase().replace(' ', '')}">${i.estado}</span>
+      </div>
+      <div class="incidencia-meta">
+        <strong>Área:</strong> ${escapeHtml(i.area)}<br>
+        ${i.responsable ? `<strong>Responsable:</strong> ${escapeHtml(i.responsable)}<br>` : ''}
+        ${i.distrito ? `<strong>Distrito:</strong> ${escapeHtml(i.distrito)}<br>` : ''}
+        ${i.direccion ? `<strong>📍</strong> ${escapeHtml(i.direccion)}<br>` : ''}
+        <strong>Fecha:</strong> ${new Date(i.fecha).toLocaleString('es-ES')}<br>
+        ${i.descripcion ? `<div style="margin-top:6px;">${escapeHtml(i.descripcion)}</div>` : ''}
+        <div style="margin-top:6px;">
+          <span class="badge ${i.sincronizada ? 'badge-sync' : 'badge-pending-sync'}">
+            ${i.sincronizada ? '☁ Sincronizada' : '⏳ Pendiente sync'}
+          </span>
+        </div>
+      </div>
+      ${i.foto ? `<img class="incidencia-foto" src="${i.foto}" />` : ''}
+    </div>
+  `).join('');
+}
+
+function refreshResponsables() {
+  const datalist = document.getElementById('responsables-comunes');
+  const responsables = [...new Set(STORE.incidencias.map(i => i.responsable).filter(Boolean))];
+  datalist.innerHTML = responsables.map(r => `<option value="${escapeHtml(r)}">`).join('');
+}
+
+// ===== CONFIG =====
+function initConfig() {
+  document.getElementById('config-url').value = STORE.config.url || '';
+  document.getElementById('config-clave').value = STORE.config.clave || '';
+
+  document.getElementById('show-clave').addEventListener('change', (e) => {
+    document.getElementById('config-clave').type = e.target.checked ? 'text' : 'password';
+  });
+
+  document.getElementById('btn-save-config').addEventListener('click', () => {
+    const url = document.getElementById('config-url').value.trim();
+    const clave = document.getElementById('config-clave').value.trim();
+    STORE.config = { ...STORE.config, url, clave };
+    toast('Configuración guardada', 'success');
+    updateSyncStatus();
+    if (url) syncPendientes();
+  });
+
+  document.getElementById('btn-sync').addEventListener('click', async () => {
+    if (!STORE.config.url) {
+      toast('Configura primero la URL de Sheets', 'error');
+      return;
+    }
+    toast('Sincronizando...');
+    await syncPendientes();
+    toast('Sincronización completada', 'success');
+  });
+
+  document.getElementById('btn-clear').addEventListener('click', () => {
+    if (confirm('¿Borrar todas las incidencias locales? Esto no afecta a Google Sheets.')) {
+      STORE.incidencias = [];
+      refreshListado();
+      updateSyncStatus();
+      toast('Datos locales borrados', 'success');
+    }
+  });
+}
+
+// ===== UTILS =====
+function toast(msg, type) {
+  const t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'toast show ' + (type || '');
+  clearTimeout(t._timer);
+  t._timer = setTimeout(() => t.className = 'toast', 3000);
+}
+
+function escapeHtml(s) {
+  if (s == null) return '';
+  return String(s).replace(/[&<>"']/g, c => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+  }[c]));
+}
+</script>
+</body>
+</html>
