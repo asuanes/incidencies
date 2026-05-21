@@ -548,18 +548,13 @@
   <!-- ===== ADMIN (oculto para no admin) ===== -->
   <div id="tab-admin" class="tab-content" style="display:none;">
     <div class="config-section">
-      <h2>⚙ Conexión</h2>
-      <p>URL del Apps Script (termina en <code>/exec</code>):</p>
-      <input type="text" id="config-url" class="url-input" placeholder="https://script.google.com/macros/s/.../exec" />
-      <p style="margin-top:16px;">Client ID de Google Cloud:</p>
-      <input type="text" id="config-client-id" class="url-input" placeholder="Client ID" />
-      <button class="submit-btn" id="btn-save-config" style="margin-top:12px;">Guardar configuración</button>
-      <p style="margin-top:8px;font-size:11px;">Recarga la página tras guardar el Client ID.</p>
+      <h2>ℹ Información de conexión</h2>
+      <p style="font-size:12px;">La URL del script y el Client ID están fijos en el código de la app para que todos los usuarios accedan igual. Si necesitas cambiarlos (porque rehagas el script o el Client ID), edita las constantes <code>APP_CONFIG</code> al principio del <code>&lt;script&gt;</code> en <code>index.html</code> y vuelve a subir el archivo a GitHub.</p>
     </div>
 
     <div class="config-section">
       <h2>👥 Correos autorizados</h2>
-      <p>Personas que pueden iniciar sesión y registrar incidencias. Tu correo de admin está siempre autorizado aunque no aparezca aquí.</p>
+      <p>Personas que pueden iniciar sesión y registrar incidencias. Tu correo de admin está siempre autorizado.</p>
       <div id="autorizados-list"></div>
       <div class="add-row">
         <input type="email" id="autorizados-input" placeholder="nuevo.correo@santboi.cat" />
@@ -589,13 +584,29 @@
 
 <script>
 // =============================================================
+// CONFIGURACIÓN FIJA (igual para todos los usuarios)
+// =============================================================
+const APP_CONFIG = {
+  url: 'https://script.google.com/macros/s/AKfycbynN6uLoY3MiUzJRRgWAkWF5VT0zkYF21lj8gTmNdLh7oUBXP_0e2nVO1ao2_E1VIkA/exec',
+  clientId: '884701444668-iohpqp36onh3qtm3doneabkt1bbscdqe.apps.googleusercontent.com'
+};
+
+// =============================================================
 // ESTADO GLOBAL
 // =============================================================
 const STORE = {
   get incidencias() { return JSON.parse(localStorage.getItem('incidencias') || '[]'); },
   set incidencias(v) { localStorage.setItem('incidencias', JSON.stringify(v)); },
-  get config() { return JSON.parse(localStorage.getItem('config') || '{}'); },
-  set config(v) { localStorage.setItem('config', JSON.stringify(v)); },
+  get config() {
+    // La URL y Client ID vienen fijos; el resto desde localStorage
+    const stored = JSON.parse(localStorage.getItem('config') || '{}');
+    return { ...stored, url: APP_CONFIG.url, clientId: APP_CONFIG.clientId };
+  },
+  set config(v) {
+    // Guardamos solo lo que no es URL/Client ID
+    const { url, clientId, ...rest } = v;
+    localStorage.setItem('config', JSON.stringify(rest));
+  },
   get listas() { return JSON.parse(localStorage.getItem('listas') || '{}'); },
   set listas(v) { localStorage.setItem('listas', JSON.stringify(v)); },
   get incidenciasRemotas() { return JSON.parse(localStorage.getItem('incidencias_remotas') || '[]'); },
@@ -629,12 +640,7 @@ function initLogin() {
     return;
   }
 
-  const clientId = STORE.config.clientId;
-  if (!clientId) {
-    showLoginScreen('Configura primero el Client ID en pestaña Admin (recarga después).');
-    showAppShellForConfig();
-    return;
-  }
+  const clientId = APP_CONFIG.clientId;
 
   const saved = getSavedSession();
   if (saved) { onLoginSuccess(saved.token, saved.payload); return; }
@@ -705,23 +711,6 @@ function logout() {
 function showLoginScreen(msg) {
   document.getElementById('login-screen').style.display = 'flex';
   if (msg) document.getElementById('login-error').textContent = msg;
-}
-
-function showAppShellForConfig() {
-  setTimeout(() => {
-    const btn = document.createElement('button');
-    btn.textContent = 'Ir a configuración';
-    btn.className = 'submit-btn';
-    btn.style.marginTop = '20px';
-    btn.style.maxWidth = '240px';
-    btn.onclick = () => {
-      document.getElementById('login-screen').style.display = 'none';
-      document.getElementById('tab-admin-btn').style.display = 'block';
-      if (!appInitialized) { initTabs(); appInitialized = true; }
-      document.querySelector('.tab[data-tab="admin"]').click();
-    };
-    document.getElementById('login-screen').appendChild(btn);
-  }, 100);
 }
 
 function parseJwt(token) {
@@ -1133,9 +1122,7 @@ async function syncPendientes() {
 function updateSyncStatus() {
   const pend = STORE.incidencias.filter(i => !i.sincronizada).length;
   const el = document.getElementById('sync-status');
-  if (!STORE.config.url || !STORE.config.clientId) {
-    el.textContent = '⚙ Sin configurar'; el.style.color = 'var(--warning)';
-  } else if (pend > 0) {
+  if (pend > 0) {
     el.textContent = `⏳ ${pend} pendiente${pend > 1 ? 's' : ''}`; el.style.color = 'var(--warning)';
   } else {
     el.textContent = '✓ Sincronizado'; el.style.color = 'var(--success)';
@@ -1400,20 +1387,6 @@ async function removeAutorizado(idx) {
 // CONFIG (admin)
 // =============================================================
 function initConfig() {
-  const urlEl = document.getElementById('config-url');
-  const cidEl = document.getElementById('config-client-id');
-  if (urlEl) urlEl.value = STORE.config.url || '';
-  if (cidEl) cidEl.value = STORE.config.clientId || '';
-
-  const btnSave = document.getElementById('btn-save-config');
-  if (btnSave) btnSave.addEventListener('click', () => {
-    const url = document.getElementById('config-url').value.trim();
-    const clientId = document.getElementById('config-client-id').value.trim();
-    STORE.config = { ...STORE.config, url, clientId };
-    toast('Guardado. Recarga la página.', 'success');
-    updateSyncStatus();
-  });
-
   const btnInit = document.getElementById('btn-inicializar');
   if (btnInit) btnInit.addEventListener('click', async () => {
     const res = await apiCall('inicializar_config');
@@ -1423,7 +1396,6 @@ function initConfig() {
 
   const btnSync = document.getElementById('btn-sync');
   if (btnSync) btnSync.addEventListener('click', async () => {
-    if (!STORE.config.url) return toast('Configura URL', 'error');
     if (!getSavedSession()) return toast('Inicia sesión', 'error');
     toast('Sincronizando...');
     await syncPendientes();
